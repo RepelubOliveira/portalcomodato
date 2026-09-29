@@ -13,7 +13,13 @@ import {
 } from 'lucide-react';
 import { MarcaRisel } from '@/components/MarcaRisel';
 import { cn } from '@/components/ui/primitivos';
-import { ROTULO_PAPEL, nomeUnidade, type Papel } from '@/domain/unidades';
+import {
+  ROTULO_PAPEL,
+  enxergaGrupoInteiro,
+  nomeUnidade,
+  type Papel,
+} from '@/domain/unidades';
+import { usePerfil, useSessao } from '@/auth/SessaoProvider';
 
 interface ItemNav {
   para: string;
@@ -32,23 +38,17 @@ const NAVEGACAO: ItemNav[] = [
   { para: '/administracao', rotulo: 'Administração', icone: Settings, papeis: ['admin', 'master'] },
 ];
 
-// Provisório até a autenticação entrar: hoje a sessão é fixa para
-// conseguirmos montar as telas com a alçada já aplicada.
-const SESSAO = {
-  nome: 'Matheus Oliveira',
-  papeis: ['admin'] as Papel[],
-  unidade: 'PLN',
-};
-
 export function LayoutPortal() {
   const [menuAberto, setMenuAberto] = useState(false);
   const caminho = useRouterState({ select: (s) => s.location.pathname });
+  const perfil = usePerfil();
+  const { sair } = useSessao();
 
   const itens = NAVEGACAO.filter(
-    (item) => !item.papeis || item.papeis.some((p) => SESSAO.papeis.includes(p)),
+    (item) => !item.papeis || item.papeis.some((p) => perfil.papeis.includes(p)),
   );
 
-  const visaoGrupo = SESSAO.papeis.some((p) => p === 'admin' || p === 'master');
+  const visaoGrupo = enxergaGrupoInteiro(perfil.papeis);
 
   return (
     <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-[256px_1fr]">
@@ -111,18 +111,23 @@ export function LayoutPortal() {
         <div className="border-t border-slate-200 p-3">
           <div className="rounded-md bg-slate-50 px-3 py-2.5">
             <p className="truncate text-sm font-semibold text-slate-900">
-              {SESSAO.nome}
+              {perfil.nome}
             </p>
             <p className="mt-0.5 truncate text-xs text-slate-500">
-              {SESSAO.papeis.map((p) => ROTULO_PAPEL[p]).join(', ')}
+              {perfil.papeis.map((p) => ROTULO_PAPEL[p]).join(', ')}
             </p>
             <p className="mt-1 truncate text-xs font-medium text-risel-700">
               {visaoGrupo
                 ? 'Todas as unidades'
-                : `${SESSAO.unidade} · ${nomeUnidade(SESSAO.unidade)}`}
+                : perfil.unidade
+                  ? `${perfil.unidade} · ${nomeUnidade(perfil.unidade)}`
+                  : 'Sem unidade'}
             </p>
           </div>
-          <button className="mt-2 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+          <button
+            onClick={() => void sair()}
+            className="mt-2 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+          >
             <LogOut className="size-4" />
             Sair
           </button>
