@@ -1,123 +1,197 @@
 import { useMemo, useState } from 'react';
-import { Plus, ShieldCheck, X } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil, ShieldCheck, X } from 'lucide-react';
 import {
   Botao,
   Campo,
   Cartao,
-  Entrada,
   Selecao,
   cn,
 } from '@/components/ui/primitivos';
-import { ROTULO_PAPEL, UNIDADES, nomeUnidade, type Papel } from '@/domain/unidades';
+import { Carregando, FalhaAoCarregar, Vazio } from '@/components/ui/Estados';
+import { ROTULO_PAPEL, nomeUnidade, type Papel } from '@/domain/unidades';
 import {
   ROTULO_SITUACAO,
   exigeUnidade,
-  validarUsuario,
-  type ErroValidacao,
+  type SituacaoUsuario,
   type Usuario,
 } from '@/domain/usuarios';
+import {
+  listarUnidades,
+  listarUsuarios,
+  salvarAcesso,
+} from '@/dados/administracao';
+import { usePerfil } from '@/auth/SessaoProvider';
 
 const PAPEIS: Papel[] = ['admin', 'master', 'assistente', 'financeiro', 'juridico'];
+const SITUACOES: SituacaoUsuario[] = ['ativo', 'convidado', 'inativo'];
 
-const USUARIOS_INICIAIS: Usuario[] = [
-  {
-    id: 'u1',
-    nome: 'Matheus Oliveira',
-    email: 'matheus.oliveira@risel.com.br',
-    papeis: ['admin'],
-    unidade: null,
-    situacao: 'ativo',
-    criadoEm: '2026-01-02T09:00:00Z',
-  },
-  {
-    id: 'u2',
-    nome: 'Bruna Couto',
-    email: 'bruna.couto@risel.com.br',
-    papeis: ['assistente'],
-    unidade: 'PLN',
-    situacao: 'ativo',
-    criadoEm: '2026-02-11T09:00:00Z',
-  },
-  {
-    id: 'u3',
-    nome: 'Josiane Corol',
-    email: 'josiane.corol@risel.com.br',
-    papeis: ['master'],
-    unidade: null,
-    situacao: 'ativo',
-    criadoEm: '2026-02-11T09:00:00Z',
-  },
-];
-
-const rascunhoVazio = {
-  nome: '',
-  email: '',
-  papeis: [] as Papel[],
-  unidade: null as string | null,
-};
+interface Rascunho {
+  papeis: Papel[];
+  unidade: string | null;
+  situacao: SituacaoUsuario;
+}
 
 export function PainelUsuarios() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>(USUARIOS_INICIAIS);
-  const [formAberto, setFormAberto] = useState(false);
-  const [rascunho, setRascunho] = useState(rascunhoVazio);
-  // Só mostramos erro depois da primeira tentativa: apontar problema em campo
-  // que a pessoa ainda não preencheu é ruído.
-  const [tentouSalvar, setTentouSalvar] = useState(false);
+  const perfil = usePerfil();
+  const cliente = useQueryClient();
+  const [editando, setEditando] = useState<string | null>(null);
+  const [rascunho, setRascunho] = useState<Rascunho | null>(null);
 
-  // Revalida a cada mudança para o erro não sobreviver à correção — marcar
-  // "Administrador" precisa apagar na hora a cobrança de unidade.
-  const erros: ErroValidacao[] = useMemo(
-    () => (tentouSalvar ? validarUsuario(rascunho, usuarios) : []),
-    [tentouSalvar, rascunho, usuarios],
-  );
+  const usuarios = useQuery({ queryKey: ['usuarios'], queryFn: listarUsuarios });
+  const unidades = useQuery({ queryKey: ['unidades'], queryFn: listarUnidades });
 
-  const erroDe = (campo: ErroValidacao['campo']) =>
-    erros.find((e) => e.campo === campo)?.mensagem;
+  const gravar = useMutation({
+    mutationFn: salvarAcesso,
+    onSuccess: () => {
+      cliente.invalidateQueries({ queryKey: ['usuarios'] });
+      setEditando(null);
+      setRascunho(null);
+    },
+  });
 
-  const unidadeObrigatoria = exigeUnidade(rascunho.papeis);
+  const unidadeObrigatoria = rascunho ? exigeUnidade(rascunho.papeis) : false;
+  const faltaUnidade = unidadeObrigatoria && !rascunho?.unidade;
+
+  const abrirEdicao = (u: Usuario) => {
+    setEditando(u.id);
+    setRascunho({ papeis: u.papeis, unidade: u.unidade, situacao: u.situacao });
+    gravar.reset();
+  };
 
   const alternarPapel = (papel: Papel) =>
     setRascunho((r) => {
+      if (!r) return r;
       const papeis = r.papeis.includes(papel)
         ? r.papeis.filter((p) => p !== papel)
         : [...r.papeis, papel];
-      // Admin e master veem o grupo inteiro: a unidade deixa de fazer sentido.
+      // Admin e master enxergam o grupo: a unidade deixa de fazer sentido.
       return { ...r, papeis, unidade: exigeUnidade(papeis) ? r.unidade : null };
     });
 
-  const salvar = () => {
-    setTentouSalvar(true);
-    if (validarUsuario(rascunho, usuarios).length > 0) return;
+  const pendentes = useMemo(
+    () => (usuarios.data ?? []).filter((u) => u.situacao === 'convidado').length,
+    [usuarios.data],
+  );
 
-    setUsuarios((atual) => [
-      ...atual,
-      {
-        id: `u${Date.now()}`,
-        nome: rascunho.nome.trim(),
-        email: rascunho.email.trim().toLowerCase(),
-        papeis: rascunho.papeis,
-        unidade: rascunho.unidade,
-        situacao: 'convidado',
-        criadoEm: new Date().toISOString(),
-      },
-    ]);
-    setRascunho(rascunhoVazio);
-    setTentouSalvar(false);
-    setFormAberto(false);
-  };
+  if (usuarios.isLoading || unidades.isLoading) return <Carregando />;
+  if (usuarios.error) {
+    return <FalhaAoCarregar erro={usuarios.error} onTentarNovamente={() => usuarios.refetch()} />;
+  }
+  if (unidades.error) {
+    return <FalhaAoCarregar erro={unidades.error} onTentarNovamente={() => unidades.refetch()} />;
+  }
+
+  const lista = usuarios.data ?? [];
 
   return (
     <div className="space-y-4">
-      {formAberto && (
+      {pendentes > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <strong>
+            {pendentes === 1
+              ? '1 usuário aguardando liberação'
+              : `${pendentes} usuários aguardando liberação`}
+          </strong>{' '}
+          — eles já entram no portal, mas não enxergam nada até receberem papel
+          e unidade.
+        </div>
+      )}
+
+      <Cartao titulo="Usuários" descricao={`${lista.length} cadastrados`}>
+        {lista.length === 0 ? (
+          <Vazio>Nenhum usuário ainda.</Vazio>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                  <th className="pb-2">Usuário</th>
+                  <th className="pb-2">Papéis</th>
+                  <th className="pb-2">Alçada</th>
+                  <th className="pb-2">Situação</th>
+                  <th className="w-24 pb-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {lista.map((u) => {
+                  const visaoGrupo = !u.unidade && u.papeis.length > 0;
+                  const souEu = u.id === perfil.id;
+
+                  return (
+                    <tr key={u.id} className="border-b border-slate-100 last:border-0">
+                      <td className="py-3 pr-4">
+                        <p className="font-semibold text-slate-900">
+                          {u.nome}
+                          {souEu && (
+                            <span className="ml-2 text-xs font-normal text-slate-400">
+                              (você)
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-slate-500">{u.email}</p>
+                      </td>
+                      <td className="py-3 pr-4 text-slate-600">
+                        {u.papeis.length > 0
+                          ? u.papeis.map((p) => ROTULO_PAPEL[p]).join(', ')
+                          : <span className="text-slate-400">sem papel</span>}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold',
+                            visaoGrupo
+                              ? 'bg-gold-300/25 text-amber-900'
+                              : u.unidade
+                                ? 'bg-slate-100 text-slate-700'
+                                : 'bg-slate-50 text-slate-400',
+                          )}
+                        >
+                          {visaoGrupo && <ShieldCheck className="size-3.5" />}
+                          {visaoGrupo
+                            ? 'Todas as unidades'
+                            : u.unidade
+                              ? `${u.unidade} · ${nomeUnidade(u.unidade)}`
+                              : '—'}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <span
+                          className={cn(
+                            'rounded-md px-2 py-1 text-xs font-semibold',
+                            u.situacao === 'ativo' && 'bg-risel-50 text-risel-700',
+                            u.situacao === 'convidado' && 'bg-amber-50 text-amber-800',
+                            u.situacao === 'inativo' && 'bg-slate-100 text-slate-500',
+                          )}
+                        >
+                          {ROTULO_SITUACAO[u.situacao]}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <Botao variante="contorno" onClick={() => abrirEdicao(u)}>
+                          <Pencil className="size-3.5" />
+                          Acesso
+                        </Botao>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Cartao>
+
+      {editando && rascunho && (
         <Cartao
-          titulo="Novo usuário"
-          descricao="O convite é enviado por e-mail; o acesso só vale depois do primeiro login."
+          titulo={`Acesso de ${lista.find((u) => u.id === editando)?.nome ?? ''}`}
+          descricao="Papéis, unidade e situação. Vale imediatamente no próximo acesso."
           acao={
             <button
-              aria-label="Fechar formulário"
+              aria-label="Fechar"
               onClick={() => {
-                setFormAberto(false);
-                setTentouSalvar(false);
+                setEditando(null);
+                setRascunho(null);
               }}
               className="rounded p-1.5 text-slate-400 hover:bg-slate-100"
             >
@@ -125,30 +199,8 @@ export function PainelUsuarios() {
             </button>
           }
         >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Campo label="Nome completo" erro={erroDe('nome')}>
-              <Entrada
-                value={rascunho.nome}
-                maxLength={120}
-                onChange={(e) => setRascunho((r) => ({ ...r, nome: e.target.value }))}
-              />
-            </Campo>
-
-            <Campo label="E-mail corporativo" erro={erroDe('email')}>
-              <Entrada
-                type="email"
-                value={rascunho.email}
-                maxLength={160}
-                onChange={(e) => setRascunho((r) => ({ ...r, email: e.target.value }))}
-              />
-            </Campo>
-
-            <Campo
-              label="Papéis"
-              erro={erroDe('papeis')}
-              hint="Admin e Master enxergam todas as unidades."
-              className="sm:col-span-2"
-            >
+          <div className="grid gap-4">
+            <Campo label="Papéis" hint="Admin e Master enxergam todas as unidades.">
               <div className="flex flex-wrap gap-2">
                 {PAPEIS.map((papel) => {
                   const marcado = rascunho.papeis.includes(papel);
@@ -172,118 +224,93 @@ export function PainelUsuarios() {
               </div>
             </Campo>
 
-            <Campo
-              label="Unidade"
-              erro={erroDe('unidade')}
-              hint={
-                unidadeObrigatoria
-                  ? 'O usuário só enxergará solicitações desta unidade.'
-                  : 'Não se aplica: este papel enxerga o grupo inteiro.'
-              }
-              className="sm:col-span-2 sm:max-w-sm"
-            >
-              <Selecao
-                disabled={!unidadeObrigatoria}
-                value={rascunho.unidade ?? ''}
-                onChange={(e) =>
-                  setRascunho((r) => ({ ...r, unidade: e.target.value || null }))
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Campo
+                label="Unidade"
+                erro={
+                  faltaUnidade
+                    ? 'Este papel precisa de uma unidade — sem ela o usuário não vê nenhuma solicitação.'
+                    : undefined
+                }
+                hint={
+                  unidadeObrigatoria
+                    ? undefined
+                    : 'Não se aplica: este papel enxerga o grupo inteiro.'
                 }
               >
-                <option value="">
-                  {unidadeObrigatoria ? 'Selecione a unidade' : 'Todas as unidades'}
-                </option>
-                {UNIDADES.map((u) => (
-                  <option key={u.codigo} value={u.codigo}>
-                    {u.codigo} · {u.nome}
+                <Selecao
+                  disabled={!unidadeObrigatoria}
+                  value={rascunho.unidade ?? ''}
+                  onChange={(e) =>
+                    setRascunho((r) => r && { ...r, unidade: e.target.value || null })
+                  }
+                >
+                  <option value="">
+                    {unidadeObrigatoria ? 'Selecione a unidade' : 'Todas as unidades'}
                   </option>
-                ))}
-              </Selecao>
-            </Campo>
+                  {(unidades.data ?? []).map((u) => (
+                    <option key={u.codigo} value={u.codigo}>
+                      {u.codigo} · {u.nome}
+                    </option>
+                  ))}
+                </Selecao>
+              </Campo>
+
+              <Campo label="Situação">
+                <Selecao
+                  value={rascunho.situacao}
+                  onChange={(e) =>
+                    setRascunho(
+                      (r) => r && { ...r, situacao: e.target.value as SituacaoUsuario },
+                    )
+                  }
+                >
+                  {SITUACOES.map((s) => (
+                    <option key={s} value={s}>
+                      {ROTULO_SITUACAO[s]}
+                    </option>
+                  ))}
+                </Selecao>
+              </Campo>
+            </div>
+
+            {editando === perfil.id && (
+              <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                Você está editando o próprio acesso. Remover o papel de
+                Administrador tira o seu acesso a esta tela, e só outro
+                Administrador poderá devolvê-lo.
+              </p>
+            )}
+
+            {gravar.error && <FalhaAoCarregar erro={gravar.error} />}
           </div>
 
           <div className="mt-5 flex justify-end gap-3">
             <Botao
               variante="contorno"
               onClick={() => {
-                setFormAberto(false);
-                setTentouSalvar(false);
+                setEditando(null);
+                setRascunho(null);
               }}
             >
               Cancelar
             </Botao>
-            <Botao onClick={salvar}>Enviar convite</Botao>
+            <Botao
+              disabled={faltaUnidade || gravar.isPending}
+              onClick={() =>
+                gravar.mutate({
+                  usuarioId: editando,
+                  papeis: rascunho.papeis,
+                  unidade: rascunho.unidade,
+                  situacao: rascunho.situacao,
+                })
+              }
+            >
+              {gravar.isPending ? 'Salvando…' : 'Salvar acesso'}
+            </Botao>
           </div>
         </Cartao>
       )}
-
-      <Cartao
-        titulo="Usuários"
-        descricao={`${usuarios.length} cadastrados`}
-        acao={
-          !formAberto && (
-            <Botao onClick={() => setFormAberto(true)}>
-              <Plus className="size-4" />
-              Novo usuário
-            </Botao>
-          )
-        }
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                <th className="pb-2">Usuário</th>
-                <th className="pb-2">Papéis</th>
-                <th className="pb-2">Alçada</th>
-                <th className="pb-2">Situação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios.map((u) => {
-                const visaoGrupo = !u.unidade;
-                return (
-                  <tr key={u.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-3 pr-4">
-                      <p className="font-semibold text-slate-900">{u.nome}</p>
-                      <p className="text-xs text-slate-500">{u.email}</p>
-                    </td>
-                    <td className="py-3 pr-4 text-slate-600">
-                      {u.papeis.map((p) => ROTULO_PAPEL[p]).join(', ')}
-                    </td>
-                    <td className="py-3 pr-4">
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold',
-                          visaoGrupo
-                            ? 'bg-gold-300/25 text-amber-900'
-                            : 'bg-slate-100 text-slate-700',
-                        )}
-                      >
-                        {visaoGrupo && <ShieldCheck className="size-3.5" />}
-                        {visaoGrupo
-                          ? 'Todas as unidades'
-                          : `${u.unidade} · ${nomeUnidade(u.unidade!)}`}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      <span
-                        className={cn(
-                          'rounded-md px-2 py-1 text-xs font-semibold',
-                          u.situacao === 'ativo' && 'bg-risel-50 text-risel-700',
-                          u.situacao === 'convidado' && 'bg-amber-50 text-amber-800',
-                          u.situacao === 'inativo' && 'bg-slate-100 text-slate-500',
-                        )}
-                      >
-                        {ROTULO_SITUACAO[u.situacao]}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Cartao>
     </div>
   );
 }

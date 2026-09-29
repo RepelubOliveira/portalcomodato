@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/banco.types';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const chave = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -11,7 +12,7 @@ const chave = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 export const supabaseConfigurado = Boolean(url && chave);
 
 export const supabase = supabaseConfigurado
-  ? createClient(url, chave, {
+  ? createClient<Database>(url, chave, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,

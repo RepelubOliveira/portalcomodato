@@ -1,12 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Save } from 'lucide-react';
 import { Botao, Cartao, Entrada, cn } from '@/components/ui/primitivos';
-import {
-  CATALOGO_SEED,
-  VIGENCIA_CATALOGO_SEED,
-  type CategoriaEquipamento,
-  type ItemCatalogo,
-} from '@/domain/viabilidade/catalogo';
+import { Carregando, FalhaAoCarregar, Vazio } from '@/components/ui/Estados';
+import type { CategoriaEquipamento, ItemCatalogo } from '@/domain/viabilidade/catalogo';
+import { publicarVersaoPrecos, versaoPrecosVigente } from '@/dados/administracao';
 import { formatarMoeda, lerNumero } from '@/lib/formato';
 
 const ROTULO_CATEGORIA: Record<CategoriaEquipamento, string> = {
@@ -20,23 +18,35 @@ const ROTULO_CATEGORIA: Record<CategoriaEquipamento, string> = {
 };
 
 const ORDEM: CategoriaEquipamento[] = [
-  'tanque',
-  'bacia',
-  'bomba',
-  'medicao',
-  'acessorio',
-  'arla',
-  'servico',
+  'tanque', 'bacia', 'bomba', 'medicao', 'acessorio', 'arla', 'servico',
 ];
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 
 export function PainelTabelaPrecos() {
-  const [itens, setItens] = useState<ItemCatalogo[]>(CATALOGO_SEED);
-  const [vigencia, setVigencia] = useState(VIGENCIA_CATALOGO_SEED);
+  const cliente = useQueryClient();
+  const vigente = useQuery({ queryKey: ['precos'], queryFn: versaoPrecosVigente });
+
+  const [itens, setItens] = useState<ItemCatalogo[]>([]);
+  const [vigencia, setVigencia] = useState(hoje());
   const [alterados, setAlterados] = useState<Set<string>>(new Set());
 
-  const semPreco = itens.filter((i) => i.custoUnitario === null || i.custoUnitario <= 0);
+  // Carrega a versão em vigor como ponto de partida da próxima.
+  useEffect(() => {
+    if (!vigente.data) return;
+    setItens(vigente.data.itens);
+    setVigencia(vigente.data.vigencia);
+    setAlterados(new Set());
+  }, [vigente.data]);
+
+  const publicar = useMutation({
+    mutationFn: () =>
+      publicarVersaoPrecos(vigencia, itens, `Revisão publicada em ${hoje()}`),
+    onSuccess: () => {
+      cliente.invalidateQueries({ queryKey: ['precos'] });
+      setAlterados(new Set());
+    },
+  });
 
   const porCategoria = useMemo(
     () =>
@@ -47,16 +57,29 @@ export function PainelTabelaPrecos() {
     [itens],
   );
 
-  const defasada = vigencia < '2025-01-01';
+  const semPreco = itens.filter((i) => i.custoUnitario === null || i.custoUnitario <= 0);
+  const vigenciaAtual = vigente.data?.vigencia ?? '';
+  const defasada = vigenciaAtual !== '' && vigenciaAtual < '2025-01-01';
+  // Publicar sem mudar a vigência criaria duas versões para a mesma data, e
+  // qual delas vale passaria a depender do horário de publicação.
+  const vigenciaInalterada = vigencia === vigenciaAtual;
 
   const atualizar = (codigo: string, valor: string) => {
     setItens((atual) =>
       atual.map((i) =>
-        i.codigo === codigo ? { ...i, custoUnitario: lerNumero(valor) } : i,
+        i.codigo === codigo
+          ? { ...i, custoUnitario: valor.trim() === '' ? null : lerNumero(valor) }
+          : i,
       ),
     );
     setAlterados((a) => new Set(a).add(codigo));
   };
+
+  if (vigente.isLoading) return <Carregando />;
+  if (vigente.error) {
+    return <FalhaAoCarregar erro={vigente.error} onTentarNovamente={() => vigente.refetch()} />;
+  }
+  if (!vigente.data) return <Vazio>Nenhuma tabela de preços publicada ainda.</Vazio>;
 
   return (
     <div className="space-y-4">
@@ -65,13 +88,13 @@ export function PainelTabelaPrecos() {
           <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600" />
           <div className="text-sm text-amber-900">
             <p className="font-semibold">
-              Tabela com vigência de{' '}
-              {new Date(`${vigencia}T12:00:00`).toLocaleDateString('pt-BR')}.
+              Tabela em vigor desde{' '}
+              {new Date(`${vigenciaAtual}T12:00:00`).toLocaleDateString('pt-BR')}.
             </p>
             <p className="mt-0.5">
               Toda viabilidade calculada hoje usa estes valores. Atualize os custos
-              e registre uma vigência nova — as análises antigas continuam apontando
-              para a versão que valia no dia delas.
+              e publique com uma vigência nova — as análises antigas continuam
+              apontando para a versão que valia no dia delas.
             </p>
           </div>
         </div>
@@ -80,10 +103,7 @@ export function PainelTabelaPrecos() {
       {semPreco.length > 0 && (
         <div className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700">
           <span className="font-semibold">
-            {semPreco.length === 1
-              ? '1 item sem custo'
-              : `${semPreco.length} itens sem custo`}
-            :
+            {semPreco.length === 1 ? '1 item sem custo' : `${semPreco.length} itens sem custo`}:
           </span>{' '}
           {semPreco.map((i) => i.descricao).join(', ')}. O Financeiro precisa
           informar o valor de compra — enquanto isso, esses itens entram zerados
@@ -98,7 +118,7 @@ export function PainelTabelaPrecos() {
           <div className="flex flex-wrap items-end gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-500">
-                Vigência
+                Vigência da nova versão
               </label>
               <Entrada
                 type="date"
@@ -108,14 +128,31 @@ export function PainelTabelaPrecos() {
                 onChange={(e) => setVigencia(e.target.value)}
               />
             </div>
-            <Botao disabled={alterados.size === 0}>
+            <Botao
+              disabled={alterados.size === 0 || vigenciaInalterada || publicar.isPending}
+              onClick={() => publicar.mutate()}
+            >
               <Save className="size-4" />
-              Publicar versão
-              {alterados.size > 0 && ` (${alterados.size})`}
+              {publicar.isPending ? 'Publicando…' : 'Publicar versão'}
+              {alterados.size > 0 && !publicar.isPending && ` (${alterados.size})`}
             </Botao>
           </div>
         }
       >
+        {alterados.size > 0 && vigenciaInalterada && (
+          <p className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Escolha uma vigência diferente de{' '}
+            {new Date(`${vigenciaAtual}T12:00:00`).toLocaleDateString('pt-BR')}. Duas
+            versões na mesma data deixariam ambíguo qual delas vale.
+          </p>
+        )}
+
+        {publicar.error && (
+          <div className="mb-4">
+            <FalhaAoCarregar erro={publicar.error} />
+          </div>
+        )}
+
         <div className="space-y-6">
           {porCategoria.map(({ categoria, itens: grupo }) => (
             <section key={categoria}>
@@ -130,10 +167,7 @@ export function PainelTabelaPrecos() {
                       const mudou = alterados.has(item.codigo);
 
                       return (
-                        <tr
-                          key={item.codigo}
-                          className="border-b border-slate-100 last:border-0"
-                        >
+                        <tr key={item.codigo} className="border-b border-slate-100 last:border-0">
                           <td className="py-2 pr-4">
                             <span className="text-slate-800">{item.descricao}</span>
                             {mudou && (
@@ -149,10 +183,7 @@ export function PainelTabelaPrecos() {
                           </td>
                           <td className="w-44 py-2">
                             <Entrada
-                              className={cn(
-                                'text-right',
-                                vazio && 'border-amber-400 bg-amber-50',
-                              )}
+                              className={cn('text-right', vazio && 'border-amber-400 bg-amber-50')}
                               inputMode="decimal"
                               placeholder="a definir"
                               value={
@@ -164,9 +195,7 @@ export function PainelTabelaPrecos() {
                             />
                           </td>
                           <td className="tabular w-32 py-2 pl-4 text-right text-slate-500">
-                            {item.custoUnitario !== null
-                              ? formatarMoeda(item.custoUnitario)
-                              : '—'}
+                            {item.custoUnitario !== null ? formatarMoeda(item.custoUnitario) : '—'}
                           </td>
                         </tr>
                       );
