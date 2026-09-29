@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, ShieldCheck, X } from 'lucide-react';
+import { Pencil, Plus, ShieldCheck, X } from 'lucide-react';
+import { FormularioConvite } from './FormularioConvite';
 import {
   Botao,
   Campo,
@@ -37,6 +38,7 @@ export function PainelUsuarios() {
   const cliente = useQueryClient();
   const [editando, setEditando] = useState<string | null>(null);
   const [rascunho, setRascunho] = useState<Rascunho | null>(null);
+  const [convidando, setConvidando] = useState(false);
 
   const usuarios = useQuery({ queryKey: ['usuarios'], queryFn: listarUsuarios });
   const unidades = useQuery({ queryKey: ['unidades'], queryFn: listarUnidades });
@@ -98,7 +100,26 @@ export function PainelUsuarios() {
         </div>
       )}
 
-      <Cartao titulo="Usuários" descricao={`${lista.length} cadastrados`}>
+      {convidando && (
+        <FormularioConvite
+          unidades={unidades.data ?? []}
+          existentes={lista}
+          onFechar={() => setConvidando(false)}
+        />
+      )}
+
+      <Cartao
+        titulo="Usuários"
+        descricao={`${lista.length} cadastrados`}
+        acao={
+          !convidando && (
+            <Botao onClick={() => setConvidando(true)}>
+              <Plus className="size-4" />
+              Convidar usuário
+            </Botao>
+          )
+        }
+      >
         {lista.length === 0 ? (
           <Vazio>Nenhum usuário ainda.</Vazio>
         ) : (

@@ -119,6 +119,51 @@ export async function salvarAcesso(alteracao: AlteracaoAcesso): Promise<void> {
   if (erroInsercao) throw new Error(erroInsercao.message);
 }
 
+export interface Convite {
+  nome: string;
+  email: string;
+  papeis: Papel[];
+  unidade: string | null;
+}
+
+export interface ResultadoConvite {
+  id: string;
+  email: string;
+  /** Link de definição de senha, para repassar enquanto não há SMTP. */
+  linkConvite: string | null;
+}
+
+/**
+ * Convida um usuário.
+ *
+ * Passa pela Edge Function porque criar conta exige a chave `service_role`,
+ * que ignora toda a RLS e por isso não pode existir no navegador. A função
+ * confere no banco se quem chamou é Administrador antes de fazer qualquer
+ * coisa — a tela esconder o botão não é garantia nenhuma.
+ */
+export async function convidarUsuario(convite: Convite): Promise<ResultadoConvite> {
+  const { data, error } = await exigirSupabase().functions.invoke('convidar-usuario', {
+    body: convite,
+  });
+
+  if (error) {
+    // A mensagem útil vem no corpo da resposta, não no erro de transporte:
+    // sem isto o usuário veria só "Edge Function returned a non-2xx status".
+    const contexto = (error as { context?: Response }).context;
+    if (contexto && typeof contexto.json === 'function') {
+      try {
+        const corpo = await contexto.json();
+        if (corpo?.erro) throw new Error(corpo.erro);
+      } catch (e) {
+        if (e instanceof Error && e.message) throw e;
+      }
+    }
+    throw new Error(error.message);
+  }
+
+  return data as ResultadoConvite;
+}
+
 // ---------------------------------------------------------------------------
 // Tabela de preços
 // ---------------------------------------------------------------------------
