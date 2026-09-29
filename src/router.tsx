@@ -9,6 +9,7 @@ import { CalculadoraViabilidade } from '@/features/viabilidade/CalculadoraViabil
 import { Administracao } from '@/features/administracao/Administracao';
 import { ListaSolicitacoes } from '@/features/solicitacoes/ListaSolicitacoes';
 import { DetalheSolicitacao } from '@/features/solicitacoes/DetalheSolicitacao';
+import { VisaoGeral } from '@/features/visaogeral/VisaoGeral';
 import { EmConstrucao } from '@/components/EmConstrucao';
 
 const rotaRaiz = createRootRoute({ component: LayoutPortal });
@@ -25,12 +26,7 @@ const rota = <const T extends string>(
   component: () => React.ReactElement,
 ) => createRoute({ getParentRoute: () => rotaRaiz, path, component });
 
-const rotaVisaoGeral = rota('/', () => (
-  <EmConstrucao
-    titulo="Visão geral"
-    descricao="Indicadores de prazo e fluxo, com SLA medido por coorte e contagem em dias úteis."
-  />
-));
+const rotaVisaoGeral = rota('/', () => <VisaoGeral />);
 
 const rotaSolicitacoes = rota('/solicitacoes', () => <ListaSolicitacoes />);
 
