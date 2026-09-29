@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router';
 import { LayoutPortal } from '@/components/LayoutPortal';
 import { CalculadoraViabilidade } from '@/features/viabilidade/CalculadoraViabilidade';
+import { Administracao } from '@/features/administracao/Administracao';
 import { EmConstrucao } from '@/components/EmConstrucao';
 
 const rotaRaiz = createRootRoute({ component: LayoutPortal });
@@ -39,12 +40,7 @@ const rotas = [
       descricao="Comparativo entre as unidades do grupo."
     />
   )),
-  rota('/administracao', () => (
-    <EmConstrucao
-      titulo="Administração"
-      descricao="Usuários, papéis, tabela de preços e parâmetros do cálculo."
-    />
-  )),
+  rota('/administracao', () => <Administracao />),
 ];
 
 const arvoreDeRotas = rotaRaiz.addChildren(rotas);
