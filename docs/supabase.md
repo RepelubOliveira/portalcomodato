@@ -14,6 +14,7 @@ As quatro migrations já foram aplicadas:
 | `0002_rls.sql` | RLS em todas as tabelas + gatilho anti-autopromoção |
 | `0003_seed.sql` | 8 unidades, tabela de preços F-VE.4, parâmetros |
 | `0004_restringir_execute.sql` | fecha os endpoints RPC das funções de alçada |
+| `0005_corrige_gatilho_autopromocao.sql` | libera o gatilho para acesso administrativo |
 
 Carga conferida: 8 unidades · 27 itens de preço (1 sem custo: carretinha) ·
 vigência 01/06/2019 · fator de payback 2,5%.
