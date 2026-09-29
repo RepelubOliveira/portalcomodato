@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+
+/*
+ * Identidade Grupo Risel. O verde e o dourado vêm da marca; o resto da
+ * escala é neutro para não competir com os indicadores de status.
+ */
+@theme {
+  --color-risel-50: #eef7f0;
+  --color-risel-100: #d3ead9;
+  --color-risel-200: #a8d5b4;
+  --color-risel-300: #6fba84;
+  --color-risel-400: #3d9a5b;
+  --color-risel-500: #1f7a3f;
+  --color-risel-600: #146031;
+  --color-risel-700: #0f4c27;
+  --color-risel-800: #0b3a1e;
+  --color-risel-900: #072815;
+
+  --color-gold-300: #e8c869;
+  --color-gold-400: #d9ae35;
+  --color-gold-500: #c3921c;
+
+  /* Semântica de prazo — usada nos indicadores de SLA. */
+  --color-prazo-ok: #1f7a3f;
+  --color-prazo-alerta: #b45309;
+  --color-prazo-estourado: #b91c1c;
+
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-slate-50);
+    color: var(--color-slate-800);
+    font-family: var(--font-sans);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Números de tabela e indicador alinham melhor tabulares. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
