@@ -137,6 +137,7 @@ create or replace function enxerga_unidade(u text)
 returns boolean
 language sql
 stable
+set search_path = public, pg_temp
 as $$
   select usuario_ativo() and (ve_grupo_inteiro() or u = unidade_do_usuario());
 $$;
@@ -311,6 +312,7 @@ create trigger ao_criar_usuario
 create or replace function tocar_atualizado_em()
 returns trigger
 language plpgsql
+set search_path = public, pg_temp
 as $$
 begin
   new.atualizado_em = now();

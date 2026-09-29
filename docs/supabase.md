@@ -1,95 +1,107 @@
-# Configuração do Supabase
+# Supabase
 
-Projeto novo, separado do portal anterior (`wlwdewmcpawrrvurhnrn`), que continua
-no ar intocado enquanto a v2 é construída. A migração dos dados é o último passo.
+Projeto **`portal-comodato`** (`gkxmzxshmzrjdsytehkv`), região `sa-east-1`,
+organização Grupo Risel. Criado do zero, separado do Supabase do portal
+anterior — aquele é gerenciado pela conta do Lovable e continua intocado.
 
-## 1. Criar o projeto
+## Estado atual
 
-No [supabase.com](https://supabase.com), crie um projeto novo. Anote a região
-mais próxima (São Paulo) — latência de banco aparece em tela de tabela.
+As quatro migrations já foram aplicadas:
 
-## 2. Rodar as migrations
+| Migration | O que faz |
+|---|---|
+| `0001_schema.sql` | 10 tabelas, 6 tipos, funções de alçada, gatilhos |
+| `0002_rls.sql` | RLS em todas as tabelas + gatilho anti-autopromoção |
+| `0003_seed.sql` | 8 unidades, tabela de preços F-VE.4, parâmetros |
+| `0004_restringir_execute.sql` | fecha os endpoints RPC das funções de alçada |
 
-No **SQL Editor**, execute na ordem:
+Carga conferida: 8 unidades · 27 itens de preço (1 sem custo: carretinha) ·
+vigência 01/06/2019 · fator de payback 2,5%.
 
-1. `supabase/migrations/0001_schema.sql` — tabelas, tipos e funções de alçada
-2. `supabase/migrations/0002_rls.sql` — políticas de Row Level Security
-3. `supabase/migrations/0003_seed.sql` — unidades, tabela de preços e parâmetros
+## Variáveis de ambiente
 
-## 3. Configurar o `.env`
-
-Copie `.env.example` para `.env` e preencha com os valores de
-**Settings → API**:
+O `.env` local já está preenchido e fora do versionamento. O modelo está em
+`.env.example`:
 
 ```
-VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJ...
+VITE_SUPABASE_URL=https://gkxmzxshmzrjdsytehkv.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-A chave `anon` é pública por natureza — ela vai no bundle do navegador de
-qualquer forma. Quem protege os dados é a RLS, não o segredo da chave. A chave
-`service_role`, essa sim, **nunca** entra no projeto: ela ignora toda a RLS.
+Usamos a chave **publishable** em vez da `anon` legada: ela rotaciona de forma
+independente. Qualquer uma das duas é pública por natureza — vai para o bundle
+do navegador de qualquer jeito, e quem protege os dados é a RLS. A chave
+`service_role` ignora toda política e **não pode** entrar no projeto.
 
-Reinicie o servidor depois de criar o `.env` — o Vite lê as variáveis só na
-inicialização.
+O Vite lê as variáveis só na inicialização: reinicie o servidor depois de mudar
+o `.env`.
 
-## 4. Criar o primeiro Administrador
+## Primeiro Administrador
 
-Todo usuário nasce como `convidado` e **sem papel**. É proposital: um e-mail
-qualquer que consiga criar conta não enxerga nada. Mas isso significa que o
-primeiro administrador precisa ser promovido à mão.
+Todo usuário nasce `convidado` e **sem papel** — autenticar não dá acesso a
+nada. É proposital, mas significa que o primeiro admin precisa ser promovido
+à mão.
 
-Crie sua conta pelo portal (ou em **Authentication → Users**), e então rode no
-SQL Editor:
+1. No painel do Supabase: **Authentication → Users → Add user**, com
+   *Auto Confirm User* marcado. A senha é definida por você.
+2. Depois, no SQL Editor:
 
 ```sql
-update perfis set situacao = 'ativo'
-where email = 'matheus.oliveira@risel.com.br';
+update perfis set situacao = 'ativo' where email = 'SEU@EMAIL';
 
 insert into perfil_papeis (perfil_id, papel)
-select id, 'admin' from perfis
-where email = 'matheus.oliveira@risel.com.br';
+select id, 'admin' from perfis where email = 'SEU@EMAIL'
+on conflict do nothing;
 ```
 
-Deste ponto em diante os demais usuários são criados pela tela de
-Administração, sem tocar no banco.
+Daí em diante os demais usuários saem pela tela de Administração.
 
-## 5. Conferir se a RLS está de pé
+## Decisões de segurança
 
-Vale checar antes de cadastrar gente, porque uma política ausente é silenciosa
-até o dia em que alguém vê o que não devia:
+**Papéis em tabela separada do perfil.** Como coluna do perfil, qualquer
+política que permitisse editar o próprio perfil abriria caminho para
+autopromoção a admin.
 
-```sql
-select tablename, rowsecurity
-from pg_tables
-where schemaname = 'public'
-order by tablename;
-```
+**Gatilho `impedir_autopromocao`.** Recusa mudança de unidade, situação ou
+e-mail por quem não é admin. Foi escrito primeiro como subconsulta no
+`WITH CHECK` e trocado por gatilho: regra de segurança não deve depender de
+sutilezas de visibilidade de transação para estar correta.
 
-Todas as tabelas devem aparecer com `rowsecurity = true`.
+**Funções de alçada em `SECURITY DEFINER` com `search_path` fixo.** Sem
+`SECURITY DEFINER`, a política que consulta `perfil_papeis` dispararia a RLS da
+própria tabela e entraria em recursão. O `search_path` impede que a função seja
+sequestrada por uma tabela homônima.
 
-## Como a alçada funciona
+**`EXECUTE` revogado de `anon`.** O PostgREST publica toda função do schema
+`public` como endpoint RPC — sem o `0004`, `/rest/v1/rpc/tem_papel` respondia a
+quem nem estava logado.
+
+O linter do Supabase ainda reporta 4 avisos de "signed-in users can execute
+SECURITY DEFINER function", e eles ficam assim de propósito: as políticas de RLS
+são avaliadas com os privilégios de quem consulta, então `authenticated`
+**precisa** manter o `EXECUTE`. As funções operam sobre `auth.uid()` e só
+revelam ao usuário os próprios papéis e a própria unidade.
+
+**Custos e histórico são append-only.** Sem política de `update` nem de
+`delete`: custo antigo é a prova do que valia no dia de uma viabilidade
+aprovada, e trilha editável depois do fato não serve como auditoria.
+
+## Alçada
 
 | Papel | Enxerga |
 |---|---|
 | Administrador, Master | todas as unidades |
 | Assistente, Financeiro, Jurídico | apenas a própria unidade |
 
-A regra está na função `enxerga_unidade()`, usada por todas as políticas de
+A regra vive na função `enxerga_unidade()`, usada pelas políticas de
 solicitações, itens, histórico e custos. A tela também filtra, mas isso é
-conveniência: quem garante é o banco.
+conveniência — quem garante é o banco.
 
-Quatro decisões que valem registro:
+## Conferir a RLS
 
-- **Papéis em tabela separada do perfil.** Se fossem uma coluna do perfil,
-  qualquer política que deixe o usuário editar o próprio perfil abriria caminho
-  para ele virar admin.
-- **Funções de alçada em `SECURITY DEFINER`.** Sem isso, a política que consulta
-  `perfil_papeis` dispararia a RLS da própria `perfil_papeis` e entraria em
-  recursão. O `search_path` é fixado para a função não ser sequestrada por uma
-  tabela homônima.
-- **Custos e histórico são append-only.** Não há política de `update` nem de
-  `delete`: custo antigo é a prova do que valia no dia, e trilha de auditoria
-  que pode ser editada depois do fato não é trilha de auditoria.
-- **Datas com restrição no banco.** Retorno anterior ao envio é rejeitado pelo
-  `check`. No portal anterior isso passava e a duração virava zero em silêncio.
+```sql
+select tablename, rowsecurity from pg_tables
+where schemaname = 'public' order by tablename;
+```
+
+Todas devem aparecer com `rowsecurity = true`.

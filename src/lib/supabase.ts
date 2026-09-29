@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
-const chave = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const chave = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 /**
  * `false` quando o ambiente ainda não foi configurado. A aplicação usa isso
@@ -25,7 +25,7 @@ export const supabase = supabaseConfigurado
 export function exigirSupabase() {
   if (!supabase) {
     throw new Error(
-      'Supabase não configurado: defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env',
+      'Supabase não configurado: defina VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no .env',
     );
   }
   return supabase;
