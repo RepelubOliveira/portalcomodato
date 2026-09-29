@@ -25,7 +25,7 @@ describe('exigeUnidade', () => {
     expect(exigeUnidade(['juridico'])).toBe(true);
   });
 
-  it('não exige unidade para admin e master — eles veem o grupo', () => {
+  it('não exige unidade para admin e master, que veem o grupo', () => {
     expect(exigeUnidade(['admin'])).toBe(false);
     expect(exigeUnidade(['master'])).toBe(false);
   });

@@ -145,7 +145,7 @@ export function PainelParametros() {
 
         <Cartao
           titulo="Metas de prazo por etapa"
-          descricao="Contadas em dias úteis. Cada etapa tem a sua — o portal anterior usava 5 dias para tudo."
+          descricao="Contadas em dias úteis. Cada etapa tem a sua. O portal anterior usava 5 dias para tudo."
         >
           <div className="space-y-3">
             {metas.map((meta) => (

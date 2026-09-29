@@ -2,7 +2,7 @@
  * Motor de cálculo da viabilidade de comodato.
  *
  * Reproduz o formulário F-VE.4 (Revisão 00). As fórmulas foram conferidas
- * contra os valores em cache da planilha original — ver `calcular.test.ts`.
+ * contra os valores em cache da planilha original. Ver `calcular.test.ts`.
  */
 
 import { PARAMETROS_PADRAO } from './catalogo';

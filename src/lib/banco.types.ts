@@ -2,7 +2,7 @@
  * Tipos do banco, gerados a partir do schema do Supabase
  * (projeto gkxmzxshmzrjdsytehkv).
  *
- * Não editar à mão — regerar após cada migration.
+ * Não editar à mão. Regerar após cada migration.
  */
 
 export type Json =

@@ -1,5 +1,5 @@
 -- ============================================================================
--- Portal Comodato — schema inicial
+-- Portal Comodato: schema inicial
 --
 -- Tudo que a alçada precisa garantir vive aqui, não na interface: a tela pode
 -- ser contornada, a política de RLS não.
@@ -79,7 +79,7 @@ create table perfil_papeis (
 -- Funções de alçada
 --
 -- SECURITY DEFINER para não disparar RLS de perfil_papeis dentro das políticas
--- que consultam papéis — sem isso a política entraria em recursão infinita.
+-- que consultam papéis, sem isso a política entraria em recursão infinita.
 -- O search_path é fixado para a função não ser sequestrada por uma tabela
 -- homônima criada num schema do usuário.
 -- ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ as $$
 $$;
 
 -- ---------------------------------------------------------------------------
--- Tabela de preços — versionada por vigência
+-- Tabela de preços versionada por vigência
 --
 -- Cada solicitação aponta para a versão que usou. Sem isso, atualizar um preço
 -- hoje reescreveria o resultado de uma viabilidade aprovada no ano passado.
@@ -169,7 +169,7 @@ create table tabela_precos_itens (
 );
 
 -- ---------------------------------------------------------------------------
--- Parâmetros do cálculo — também versionados
+-- Parâmetros do cálculo: também versionados
 -- ---------------------------------------------------------------------------
 
 create table parametros_versoes (
@@ -185,7 +185,7 @@ create table parametros_versoes (
 );
 
 -- ---------------------------------------------------------------------------
--- Custos por unidade/produto — append-only
+-- Custos por unidade e produto: append-only
 --
 -- A assistente lança o custo a cada análise; o portal reaproveita o último.
 -- Nunca sobrescrevemos: o valor antigo é a única prova do que valia no dia.

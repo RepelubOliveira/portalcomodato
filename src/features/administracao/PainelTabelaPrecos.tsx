@@ -93,7 +93,7 @@ export function PainelTabelaPrecos() {
             </p>
             <p className="mt-0.5">
               Toda viabilidade calculada hoje usa estes valores. Atualize os custos
-              e publique com uma vigência nova — as análises antigas continuam
+              e publique com uma vigência nova. As análises antigas continuam
               apontando para a versão que valia no dia delas.
             </p>
           </div>
@@ -106,7 +106,7 @@ export function PainelTabelaPrecos() {
             {semPreco.length === 1 ? '1 item sem custo' : `${semPreco.length} itens sem custo`}:
           </span>{' '}
           {semPreco.map((i) => i.descricao).join(', ')}. O Financeiro precisa
-          informar o valor de compra — enquanto isso, esses itens entram zerados
+          informar o valor de compra. Até lá, esses itens entram zerados
           no investimento.
         </div>
       )}
@@ -195,7 +195,7 @@ export function PainelTabelaPrecos() {
                             />
                           </td>
                           <td className="tabular w-32 py-2 pl-4 text-right text-slate-500">
-                            {item.custoUnitario !== null ? formatarMoeda(item.custoUnitario) : '—'}
+                            {item.custoUnitario !== null ? formatarMoeda(item.custoUnitario) : '-'}
                           </td>
                         </tr>
                       );

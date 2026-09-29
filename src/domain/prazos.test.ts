@@ -57,7 +57,7 @@ describe('diasUteisEntre', () => {
     expect(diasUteisEntre('2026-09-28', '2026-09-29')).toBe(1);
   });
 
-  it('pula o fim de semana — sexta para segunda é 1 dia útil, não 3', () => {
+  it('pula o fim de semana: sexta para segunda é 1 dia útil, não 3', () => {
     // Sexta 25/09/2026 → segunda 28/09/2026.
     expect(diasUteisEntre('2026-09-25', '2026-09-28')).toBe(1);
   });
@@ -129,7 +129,7 @@ describe('situacaoPrazo', () => {
   });
 
   it('cai para a data de criação quando falta a data da etapa', () => {
-    // Sem viabilidadeEnvio, não assume zero — usa a criação, senão a
+    // Sem viabilidadeEnvio, não assume zero. Usa a criação, senão a
     // solicitação esquecida seria a que mais parece em dia.
     const p = situacaoPrazo({ ...base, viabilidadeEnvio: null }, undefined, '2026-09-29');
     expect(p.dias).toBe(6);

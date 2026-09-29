@@ -2,7 +2,7 @@
 
 Projeto **`portal-comodato`** (`gkxmzxshmzrjdsytehkv`), região `sa-east-1`,
 organização Grupo Risel. Criado do zero, separado do Supabase do portal
-anterior — aquele é gerenciado pela conta do Lovable e continua intocado.
+anterior, aquele é gerenciado pela conta do Lovable e continua intocado.
 
 ## Estado atual
 
@@ -30,7 +30,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
 Usamos a chave **publishable** em vez da `anon` legada: ela rotaciona de forma
-independente. Qualquer uma das duas é pública por natureza — vai para o bundle
+independente. Qualquer uma das duas é pública por natureza, vai para o bundle
 do navegador de qualquer jeito, e quem protege os dados é a RLS. A chave
 `service_role` ignora toda política e **não pode** entrar no projeto.
 
@@ -39,7 +39,7 @@ o `.env`.
 
 ## Primeiro Administrador
 
-Todo usuário nasce `convidado` e **sem papel** — autenticar não dá acesso a
+Todo usuário nasce `convidado` e **sem papel**, autenticar não dá acesso a
 nada. É proposital, mas significa que o primeiro admin precisa ser promovido
 à mão.
 
@@ -74,7 +74,7 @@ própria tabela e entraria em recursão. O `search_path` impede que a função s
 sequestrada por uma tabela homônima.
 
 **`EXECUTE` revogado de `anon`.** O PostgREST publica toda função do schema
-`public` como endpoint RPC — sem o `0004`, `/rest/v1/rpc/tem_papel` respondia a
+`public` como endpoint RPC, sem o `0004`, `/rest/v1/rpc/tem_papel` respondia a
 quem nem estava logado.
 
 O linter do Supabase ainda reporta 4 avisos de "signed-in users can execute
@@ -96,7 +96,7 @@ aprovada, e trilha editável depois do fato não serve como auditoria.
 
 A regra vive na função `enxerga_unidade()`, usada pelas políticas de
 solicitações, itens, histórico e custos. A tela também filtra, mas isso é
-conveniência — quem garante é o banco.
+conveniência, quem garante é o banco.
 
 ## Conferir a RLS
 

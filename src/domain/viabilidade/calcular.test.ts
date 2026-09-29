@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { calcularViabilidade, type EntradaViabilidade } from './calcular';
 
 /**
- * Caso real extraído de "Viabilidade.xls" — cliente CRISTIANA GUTIERREZ,
+ * Caso real extraído de "Viabilidade.xls": cliente CRISTIANA GUTIERREZ,
  * Inhaúma/MG, produto S10. Os valores esperados são as células em cache
  * da própria planilha, então este teste trava a paridade com o F-VE.4.
  */
@@ -22,7 +22,7 @@ const casoPlanilha: EntradaViabilidade = {
   ],
 };
 
-describe('calcularViabilidade — paridade com o F-VE.4', () => {
+describe('calcularViabilidade: paridade com o F-VE.4', () => {
   it('reproduz faturamento, custo e lucro bruto da planilha', () => {
     const r = calcularViabilidade(casoPlanilha);
     expect(r.faturamentoMensal).toBe(14776.2);
@@ -49,7 +49,7 @@ describe('calcularViabilidade — paridade com o F-VE.4', () => {
   });
 });
 
-describe('calcularViabilidade — bordas', () => {
+describe('calcularViabilidade: bordas', () => {
   it('não divide por zero quando não há volume', () => {
     const r = calcularViabilidade({ ...casoPlanilha, volumeMensalLitros: 0 });
     expect(r.semRetorno).toBe(true);

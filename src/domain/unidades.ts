@@ -1,7 +1,7 @@
 /**
  * Unidades (bases) do Grupo Risel.
  *
- * Provisórias — a lista definitiva vem do cliente. No banco isto vira a
+ * Provisórias. A lista definitiva vem do cliente. No banco isto vira a
  * tabela `unidades`, e cada usuário é vinculado a uma delas no cadastro.
  * A visibilidade por unidade é aplicada por RLS, não por filtro de tela.
  */

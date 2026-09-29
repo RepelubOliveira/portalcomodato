@@ -20,12 +20,44 @@
   --color-gold-400: #d9ae35;
   --color-gold-500: #c3921c;
 
-  /* Semântica de prazo — usada nos indicadores de SLA. */
+  /* Semântica de prazo, usada nos indicadores de SLA. */
   --color-prazo-ok: #1f7a3f;
   --color-prazo-alerta: #b45309;
   --color-prazo-estourado: #b91c1c;
 
-  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  /*
+   * Paleta dos gráficos.
+   *
+   * Separada da paleta da marca de propósito. O verde Risel significaria
+   * "bom" ao lado dos indicadores de status, e uma série de dados não deve
+   * carregar julgamento. Estes três tons foram verificados contra a
+   * superfície branca do painel para daltonismo (deuteranopia, protanopia e
+   * tritanopia) e para visão normal, em todos os pares.
+   */
+  --color-serie-1: #2a78d6;
+  --color-serie-2: #eb6834;
+  --color-serie-3: #1baf7a;
+
+  /* Status: sempre acompanhados de rótulo, nunca cor sozinha. */
+  --color-status-bom: #0ca30c;
+  --color-status-atencao: #fab219;
+  --color-status-serio: #ec835a;
+  --color-status-critico: #d03b3b;
+
+  /* Cromo do gráfico: eixos e grade recuam, o dado avança. */
+  --color-grade: #e8e8e4;
+  --color-eixo: #c3c2b7;
+  --color-tinta-fraca: #898781;
+
+  /*
+   * Pilha de fontes do sistema. Nenhuma fonte é baixada: o portal usa a
+   * interface nativa de cada sistema operacional, o que evita o atraso de
+   * carga e o salto de layout que uma webfont provoca.
+   */
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, Arial, 'Helvetica Neue',
+    sans-serif;
+  --font-mono: ui-monospace, Consolas, 'Courier New', monospace;
 }
 
 @layer base {

@@ -1,4 +1,4 @@
-# Portal Comodato — Grupo Risel
+# Portal Comodato · Grupo Risel
 
 Portal de controle de viabilidades e contratos de comodato. Reconstrução do
 zero, substituindo o portal anterior e a planilha **F-VE.4** que rodava por fora.
@@ -50,10 +50,10 @@ docs/
 
 `src/domain/viabilidade/calcular.test.ts` trava o cálculo contra o caso real da
 planilha original. Se a fórmula divergir do formulário controlado, o teste
-quebra — é proposital.
+quebra, é proposital.
 
 ## Pendências de negócio
 
-- Custo da **carretinha** — a origem traz "VERIFICAR VALOR DE COMPRA".
+- Custo da **carretinha**, a origem traz "VERIFICAR VALOR DE COMPRA".
 - Lista **definitiva de unidades** (as atuais são provisórias).
 - Escopo de visibilidade de **Financeiro** e **Jurídico**: por unidade ou global.

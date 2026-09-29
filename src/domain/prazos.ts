@@ -49,7 +49,7 @@ const cache = new Map<number, Set<string>>();
  * Feriados nacionais do ano, incluindo os móveis ligados à Páscoa.
  *
  * Feriados estaduais e municipais variam por unidade e ficam de fora até a
- * empresa informar quais valem em cada base — errar para menos atrasa o
+ * empresa informar quais valem em cada base. Errar para menos atrasa o
  * alarme, errar para mais o dispara sem motivo.
  */
 export function feriadosNacionais(ano: number): Set<string> {
@@ -161,7 +161,7 @@ export interface SituacaoPrazo {
 }
 
 const ENCERRADO: Omit<SituacaoPrazo, 'severidade'> = {
-  area: '—',
+  area: '-',
   etapa: 'Encerrado',
   dias: 0,
   meta: 0,

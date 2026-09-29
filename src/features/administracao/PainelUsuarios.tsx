@@ -95,7 +95,7 @@ export function PainelUsuarios() {
               ? '1 usuário aguardando liberação'
               : `${pendentes} usuários aguardando liberação`}
           </strong>{' '}
-          — eles já entram no portal, mas não enxergam nada até receberem papel
+          Eles já entram no portal, mas não enxergam nada até receberem papel
           e unidade.
         </div>
       )}
@@ -173,7 +173,7 @@ export function PainelUsuarios() {
                             ? 'Todas as unidades'
                             : u.unidade
                               ? `${u.unidade} · ${nomeUnidade(u.unidade)}`
-                              : '—'}
+                              : '-'}
                         </span>
                       </td>
                       <td className="py-3">
@@ -250,7 +250,7 @@ export function PainelUsuarios() {
                 label="Unidade"
                 erro={
                   faltaUnidade
-                    ? 'Este papel precisa de uma unidade — sem ela o usuário não vê nenhuma solicitação.'
+                    ? 'Este papel precisa de uma unidade. Sem ela o usuário não vê nenhuma solicitação.'
                     : undefined
                 }
                 hint={

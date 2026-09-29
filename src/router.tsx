@@ -39,7 +39,7 @@ const rotaViabilidade = rota('/viabilidade', () => <CalculadoraViabilidade />);
 const rotaPendencias = rota('/pendencias', () => (
   <EmConstrucao
     titulo="Minhas pendências"
-    descricao="Fila nominal — o que está atribuído a você, não ao seu papel."
+    descricao="Fila nominal: o que está atribuído a você, não ao seu papel."
   />
 ));
 

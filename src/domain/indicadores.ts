@@ -29,7 +29,7 @@ export interface SolicitacaoIndicador extends DatasSolicitacao {
 export interface DesempenhoEtapa {
   etapa: string;
   meta: number;
-  /** Quantas já concluíram esta etapa — o denominador do SLA. */
+  /** Quantas já concluíram esta etapa, que é o denominador do SLA. */
   concluidas: number;
   dentroDaMeta: number;
   /** `null` quando ninguém concluiu a etapa ainda: 0% seria mentira. */
@@ -201,7 +201,7 @@ export interface Prioridade {
  *
  * Ordena pelo **excesso sobre a meta**, não pela contagem bruta: com metas
  * diferentes por etapa, 3 dias numa etapa de meta 3 é mais urgente que 4 dias
- * numa de meta 5. E exclui as encerradas — o painel anterior as incluía no
+ * numa de meta 5. E exclui as encerradas. O painel anterior as incluía no
  * ranking, então bastava haver poucas pendências para "prioridades de hoje"
  * listar processos concluídos.
  */
@@ -217,6 +217,100 @@ export function prioridades(
     .map(({ s, p }) => ({ id: s.id, excesso: p.dias - p.meta }))
     .sort((a, b) => b.excesso - a.excesso || a.id.localeCompare(b.id))
     .slice(0, limite);
+}
+
+export interface SemanaFluxo {
+  /** Segunda-feira da semana, em ISO. */
+  inicio: string;
+  rotulo: string;
+  cadastradas: number;
+  concluidas: number;
+}
+
+/** Segunda-feira da semana a que a data pertence. */
+function segundaDaSemana(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const diaSemana = d.getUTCDay();
+  const recuo = diaSemana === 0 ? 6 : diaSemana - 1;
+  d.setUTCDate(d.getUTCDate() - recuo);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Entradas e saídas por semana.
+ *
+ * As semanas sem movimento entram com zero em vez de serem omitidas: um
+ * gráfico de linha que pula semanas vazias comprime o eixo do tempo e faz uma
+ * pausa de três semanas parecer um intervalo normal.
+ */
+export function fluxoSemanal(
+  solicitacoes: SolicitacaoIndicador[],
+  semanas = 8,
+  hoje = new Date().toISOString().slice(0, 10),
+): SemanaFluxo[] {
+  const entradas = new Map<string, number>();
+  const saidas = new Map<string, number>();
+
+  for (const s of solicitacoes) {
+    const criada = segundaDaSemana(s.criadoEm.slice(0, 10));
+    entradas.set(criada, (entradas.get(criada) ?? 0) + 1);
+
+    if (s.status === 'processo_concluido' && s.contratoRetorno) {
+      const concluida = segundaDaSemana(s.contratoRetorno);
+      saidas.set(concluida, (saidas.get(concluida) ?? 0) + 1);
+    }
+  }
+
+  const ultima = new Date(`${segundaDaSemana(hoje)}T00:00:00Z`);
+  const resultado: SemanaFluxo[] = [];
+
+  for (let i = semanas - 1; i >= 0; i -= 1) {
+    const d = new Date(ultima.getTime());
+    d.setUTCDate(d.getUTCDate() - i * 7);
+    const inicio = d.toISOString().slice(0, 10);
+    const [, mes, dia] = inicio.split('-');
+
+    resultado.push({
+      inicio,
+      rotulo: `${dia}/${mes}`,
+      cadastradas: entradas.get(inicio) ?? 0,
+      concluidas: saidas.get(inicio) ?? 0,
+    });
+  }
+
+  return resultado;
+}
+
+export interface CargaUnidade {
+  unidade: string;
+  emAberto: number;
+  acimaDaMeta: number;
+}
+
+/** Carga por unidade, ordenada da maior para a menor. */
+export function cargaPorUnidade(
+  solicitacoes: SolicitacaoIndicador[],
+  metas: MetasPrazo,
+  hoje?: string,
+): CargaUnidade[] {
+  const mapa = new Map<string, CargaUnidade>();
+
+  for (const s of solicitacoes) {
+    const p = situacaoPrazo(s, metas, hoje);
+    if (p.encerrado) continue;
+
+    const atual = mapa.get(s.unidade) ?? { unidade: s.unidade, emAberto: 0, acimaDaMeta: 0 };
+    atual.emAberto += 1;
+    if (p.severidade === 'estourado') atual.acimaDaMeta += 1;
+    mapa.set(s.unidade, atual);
+  }
+
+  return [...mapa.values()].sort(
+    (a, b) =>
+      b.acimaDaMeta - a.acimaDaMeta ||
+      b.emAberto - a.emAberto ||
+      a.unidade.localeCompare(b.unidade),
+  );
 }
 
 export const ROTULO_ETAPA_ABERTA: Record<string, string> = {

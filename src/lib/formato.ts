@@ -43,12 +43,12 @@ export function formatarPrazo(anos: number): string {
  * Prepara texto para comparação de busca: sem acento, em minúsculas.
  *
  * Ninguém digita "Lindóia" com acento numa caixa de busca, e sem isto o
- * cliente simplesmente não aparece — o usuário conclui que não existe.
+ * cliente simplesmente não aparece, e o usuário conclui que não existe.
  */
 export function normalizar(texto: string): string {
   return texto
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .trim();
 }

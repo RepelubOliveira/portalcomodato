@@ -7,7 +7,7 @@
  * valor inicial do próximo cadastro.
  *
  * Guardar o histórico em vez de sobrescrever é o que permite reabrir uma
- * viabilidade antiga e ver o custo que valia no dia — sem isso, mudar o custo
+ * viabilidade antiga e ver o custo que valia no dia. Sem isso, mudar o custo
  * hoje reescreveria o passado.
  */
 

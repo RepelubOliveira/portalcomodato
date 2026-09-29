@@ -10,7 +10,7 @@ import { MarcaRisel } from '@/components/MarcaRisel';
 /**
  * Decide o que a pessoa vê antes de qualquer rota do portal.
  *
- * O portal em si só é montado com sessão ativa — assim nenhuma tela precisa
+ * O portal em si só é montado com sessão ativa. Assim nenhuma tela precisa
  * lidar com "e se não houver perfil", e `usePerfil` pode assumir que existe.
  */
 export function PortaoAcesso({ children }: { children: ReactNode }) {

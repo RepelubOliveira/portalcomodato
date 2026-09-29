@@ -68,7 +68,7 @@ export function FormularioConvite({
           <>
             <p className="text-sm text-slate-600">
               Envie este link para a pessoa definir a senha. Ele é pessoal e tem
-              validade — se expirar, basta convidar de novo.
+              validade. Se expirar, basta convidar de novo.
             </p>
             <div className="mt-3 flex gap-2">
               <Entrada readOnly value={convidado.linkConvite} className="font-mono text-xs" />

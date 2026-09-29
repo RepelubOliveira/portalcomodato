@@ -1,5 +1,5 @@
 -- ============================================================================
--- Portal Comodato — restringir execução das funções SECURITY DEFINER
+-- Portal Comodato: restringir execução das funções SECURITY DEFINER
 --
 -- O PostgREST publica toda função do schema `public` como endpoint RPC. Sem
 -- este ajuste, as funções de alçada ficavam chamáveis até por quem não está

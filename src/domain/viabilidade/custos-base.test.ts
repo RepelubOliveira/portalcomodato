@@ -41,7 +41,7 @@ describe('ultimoCusto', () => {
     expect(ultimoCusto(historico, 'AGI', 'ARLA')).toBeNull();
   });
 
-  it('preserva o histórico anterior — o antigo continua na lista', () => {
+  it('preserva o histórico anterior, com o antigo ainda na lista', () => {
     expect(historico.filter((l) => l.unidade === 'PLN' && l.produto === 'S10')).toHaveLength(2);
   });
 });

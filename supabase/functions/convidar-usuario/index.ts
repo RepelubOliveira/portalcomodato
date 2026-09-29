@@ -4,7 +4,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 /**
  * Convite de usuário.
  *
- * Criar conta exige a chave `service_role`, que ignora toda a RLS — por isso
+ * Criar conta exige a chave `service_role`, que ignora toda a RLS, por isso
  * ela não pode existir no navegador. Esta função é a única fronteira onde ela
  * é usada, e só depois de confirmar que quem chamou é Administrador.
  *
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
   const precisaUnidade = !papeis.some((p) => PAPEIS_SEM_UNIDADE.includes(p));
   if (precisaUnidade && !unidade) {
     return responder(
-      { erro: 'Este papel precisa de uma unidade — sem ela o usuário não veria nenhuma solicitação.' },
+      { erro: 'Este papel precisa de uma unidade, sem ela o usuário não veria nenhuma solicitação.' },
       400,
     );
   }

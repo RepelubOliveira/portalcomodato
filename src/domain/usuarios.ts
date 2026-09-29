@@ -75,7 +75,7 @@ export function validarUsuario(
   if (exigeUnidade(rascunho.papeis) && !rascunho.unidade) {
     erros.push({
       campo: 'unidade',
-      mensagem: 'Este papel precisa de uma unidade — sem ela o usuário não vê nenhuma solicitação.',
+      mensagem: 'Este papel precisa de uma unidade. Sem ela o usuário não vê nenhuma solicitação.',
     });
   }
 

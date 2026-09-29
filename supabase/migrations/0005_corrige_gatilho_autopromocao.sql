@@ -1,5 +1,5 @@
 -- ============================================================================
--- Portal Comodato — gatilho anti-autopromoção: liberar acesso administrativo
+-- Portal Comodato: gatilho anti-autopromoção liberado para acesso administrativo
 --
 -- Na versão anterior o gatilho barrava também operações legítimas de backend
 -- (SQL editor, migrations, scripts de manutenção), onde auth.uid() é nulo por
@@ -7,7 +7,7 @@
 -- Administrador, que por definição não pode ser feita por um Administrador.
 --
 -- Liberar o caso nulo é seguro: auth.uid() só é nulo em acesso administrativo
--- — que ignora RLS de qualquer forma — ou em acesso anônimo, e o anônimo nem
+--, que ignora RLS de qualquer forma, ou em acesso anônimo, e o anônimo nem
 -- chega até aqui: a política perfis_atualiza_proprio exige id = auth.uid(),
 -- que nunca casa com nulo.
 -- ============================================================================

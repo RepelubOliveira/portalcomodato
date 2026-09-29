@@ -48,7 +48,7 @@ import {
 } from '@/lib/formato';
 
 const dataBR = (iso: string | null) =>
-  iso ? new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(`${iso}T12:00:00Z`)) : '—';
+  iso ? new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(`${iso}T12:00:00Z`)) : '-';
 
 const dataHora = (iso: string) =>
   new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso));
@@ -528,7 +528,7 @@ function Etapa({
         <Par rotulo="Retorno" valor={dataBR(retorno)} />
         <Par
           rotulo="Duração"
-          valor={duracao === null ? '—' : `${duracao} ${duracao === 1 ? 'dia útil' : 'dias úteis'}`}
+          valor={duracao === null ? '-' : `${duracao} ${duracao === 1 ? 'dia útil' : 'dias úteis'}`}
         />
         {resultado && <Par rotulo="Resultado" valor={resultado} />}
       </dl>

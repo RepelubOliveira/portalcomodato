@@ -1,5 +1,5 @@
 -- ============================================================================
--- Portal Comodato — carga inicial
+-- Portal Comodato: carga inicial
 --
 -- Tabela de preços do formulário F-VE.4 Revisão 00, com a vigência declarada
 -- na planilha de origem: 06/2019. Entra com a data real, e não com a de hoje,
@@ -11,7 +11,7 @@ declare
   v_versao uuid;
 begin
   insert into tabela_precos_versoes (vigencia, observacao)
-  values ('2019-06-01', 'Carga inicial — formulário F-VE.4 Revisão 00')
+  values ('2019-06-01', 'Carga inicial, formulário F-VE.4 Revisão 00')
   returning id into v_versao;
 
   insert into tabela_precos_itens

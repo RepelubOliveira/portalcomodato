@@ -159,7 +159,7 @@ export function ListaSolicitacoes() {
             {' · '}
             {visaoGrupo
               ? 'todas as unidades'
-              : `unidade ${perfil.unidade ?? '—'}`}
+              : `unidade ${perfil.unidade ?? '-'}`}
             {atrasadas > 0 && (
               <>
                 {' · '}
@@ -183,7 +183,7 @@ export function ListaSolicitacoes() {
         <Vazio>
           {visaoGrupo
             ? 'Nenhuma solicitação cadastrada ainda. Comece pela tela de Viabilidade.'
-            : `Nenhuma solicitação na unidade ${perfil.unidade ?? '—'} ainda.`}
+            : `Nenhuma solicitação na unidade ${perfil.unidade ?? '-'} ainda.`}
         </Vazio>
       ) : (
         <>

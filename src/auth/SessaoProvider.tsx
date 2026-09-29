@@ -92,7 +92,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     }
 
     // Um usuário ativo sem papel nenhum não enxergaria nada e ficaria diante
-    // de telas vazias sem explicação — tratamos como pendente.
+    // de telas vazias sem explicação, e por isso o tratamos como pendente.
     const liberado = perfil.situacao === 'ativo' && perfil.papeis.length > 0;
     setSessao({ estado: liberado ? 'ativo' : 'pendente', perfil });
   }, []);

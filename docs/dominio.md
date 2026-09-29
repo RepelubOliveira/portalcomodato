@@ -1,4 +1,4 @@
-# Domínio — Portal Comodato
+# Domínio do Portal Comodato
 
 Regras extraídas de duas fontes: o portal atual (`risel-flow-track.lovable.app`,
 lido em 29/09/2026) e o formulário controlado **F-VE.4 Revisão 00**
@@ -12,7 +12,7 @@ lido em 29/09/2026) e o formulário controlado **F-VE.4 Revisão 00**
 | 2 | `aguardando_viabilidade_financeira` | Financeiro | Registrar retorno (aprovada / reprovada) |
 | 3 | `aguardando_envio_contrato` | Assistente Comercial | Registrar envio do contrato |
 | 4 | `aguardando_assinatura_contrato` | Jurídico | Registrar contrato assinado |
-| 5 | `processo_concluido` | — | fim |
+| 5 | `processo_concluido` | | fim |
 
 Ações administrativas do Master: **voltar etapa** (justificativa obrigatória,
 registrada no histórico) e **excluir solicitação**.
@@ -20,7 +20,7 @@ registrada no histórico) e **excluir solicitação**.
 ### Mudanças na v2.0
 
 - `viabilidade_aprovada` e `contrato_assinado` existiam no enum e nunca eram
-  atingidos — removidos.
+  atingidos, removidos.
 - `viabilidade_reprovada` era beco sem saída. Passa a exigir **motivo** e a
   permitir **reapresentação** com nova configuração de equipamento.
 
@@ -43,7 +43,7 @@ limite fixo de 5 dias para qualquer etapa. Na v2.0:
 - **meta configurável por etapa**, não um número único;
 - SLA medido **por coorte** (quanto a solicitação levou), não pelo retrato de hoje.
 
-> O indicador "Atendidos até 5 dias — 94%" do portal atual é enganoso: as
+> O indicador "Atendidos até 5 dias. 94%" do portal atual é enganoso: as
 > solicitações concluídas entram no denominador sempre como "no prazo",
 > independentemente de terem levado 1 ou 13 dias.
 
@@ -78,7 +78,7 @@ prazo 1,8385 anos (novo) / 0,9193 anos (reformado). Ver `src/domain/viabilidade/
 
 ## 5. Tabela de preços
 
-A planilha declara **"VALORES ATUALIZADOS EM 06/2019"** — sete anos de defasagem.
+A planilha declara **"VALORES ATUALIZADOS EM 06/2019"**, sete anos de defasagem.
 Na v2.0 a tabela é **versionada por vigência**: cada viabilidade guarda qual
 versão usou, para que uma análise antiga continue reproduzível.
 
@@ -89,7 +89,7 @@ precisa ser confirmado com Suprimentos.
 
 Há ainda uma tabela por base/produto na planilha (Pln, Cp, On, Sbc, Guarujá,
 Aguaí × S500/S10, valores entre 2,87 e 2,96). O significado desses números não
-é dedutível da planilha — **confirmar com o Financeiro** antes de modelar.
+é dedutível da planilha **confirmar com o Financeiro** antes de modelar.
 
 ## 6. Capacidades de tanque
 

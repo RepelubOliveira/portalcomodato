@@ -6,7 +6,7 @@ const chave = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 /**
  * `false` quando o ambiente ainda não foi configurado. A aplicação usa isso
- * para mostrar uma instrução clara em vez de estourar com "Invalid URL" —
+ * para mostrar uma instrução clara em vez de estourar com "Invalid URL",
  * é o primeiro erro que qualquer pessoa nova no projeto encontraria.
  */
 export const supabaseConfigurado = Boolean(url && chave);

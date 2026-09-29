@@ -1,7 +1,7 @@
 /**
  * Catálogo de equipamentos e parâmetros da análise de viabilidade.
  *
- * Origem: formulário controlado F-VE.4 (Revisão 00) — "Viabilidade.xls".
+ * Origem: formulário controlado F-VE.4 (Revisão 00), arquivo "Viabilidade.xls".
  * A planilha declara "VALORES ATUALIZADOS EM 06/2019": esta tabela está
  * defasada e existe aqui apenas como carga inicial. No portal os preços
  * passam a ser versionados por vigência (tabela `tabela_precos` no banco),
@@ -18,7 +18,7 @@ export type CategoriaEquipamento =
   | 'servico';
 
 export interface ItemCatalogo {
-  /** Chave estável — não muda quando o rótulo muda. */
+  /** Chave estável, que não muda quando o rótulo muda. */
   codigo: string;
   descricao: string;
   categoria: CategoriaEquipamento;

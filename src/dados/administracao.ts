@@ -139,7 +139,7 @@ export interface ResultadoConvite {
  * Passa pela Edge Function porque criar conta exige a chave `service_role`,
  * que ignora toda a RLS e por isso não pode existir no navegador. A função
  * confere no banco se quem chamou é Administrador antes de fazer qualquer
- * coisa — a tela esconder o botão não é garantia nenhuma.
+ * coisa. A tela esconder o botão não é garantia nenhuma.
  */
 export async function convidarUsuario(convite: Convite): Promise<ResultadoConvite> {
   const { data, error } = await exigirSupabase().functions.invoke('convidar-usuario', {
@@ -184,7 +184,7 @@ interface ItemBruto {
   capacidade_litros: number | null;
 }
 
-/** Versão de preços em vigor — a de vigência mais recente. */
+/** Versão de preços em vigor, ou seja, a de vigência mais recente. */
 export async function versaoPrecosVigente(): Promise<VersaoPrecos | null> {
   const versoes = ou(
     await exigirSupabase()

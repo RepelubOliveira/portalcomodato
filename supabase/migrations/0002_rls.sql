@@ -1,12 +1,12 @@
 -- ============================================================================
--- Portal Comodato — Row Level Security
+-- Portal Comodato: Row Level Security
 --
 -- Regra central: Administrador e Master enxergam o grupo inteiro; todos os
 -- demais ficam restritos à própria unidade. Quem está 'convidado' ou 'inativo'
 -- não enxerga nada, mesmo tendo papel.
 --
 -- Nenhuma tabela fica sem política: no Postgres, RLS ligado sem política
--- equivale a negar tudo — e é assim que queremos falhar, fechado.
+-- equivale a negar tudo, e é assim que queremos falhar: fechado.
 -- ============================================================================
 
 alter table unidades              enable row level security;
@@ -21,7 +21,7 @@ alter table solicitacao_itens     enable row level security;
 alter table historico             enable row level security;
 
 -- ---------------------------------------------------------------------------
--- Unidades — leitura para autenticados; manutenção só do Administrador
+-- Unidades: leitura para autenticados; manutenção só do Administrador
 -- ---------------------------------------------------------------------------
 
 create policy unidades_leitura on unidades
@@ -35,7 +35,7 @@ create policy unidades_escrita on unidades
 -- ---------------------------------------------------------------------------
 -- Perfis
 --
--- Cada um lê o próprio perfil sempre — inclusive quem ainda é 'convidado',
+-- Cada um lê o próprio perfil sempre, inclusive quem ainda é 'convidado',
 -- senão a tela de login não teria como dizer que o acesso está pendente.
 -- ---------------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ create policy perfis_leitura on perfis
   );
 
 -- O próprio usuário só pode mexer no nome. Unidade e situação definem a alçada
--- e ficam fora do alcance dele — garantido pelo gatilho abaixo, não pela
+-- e ficam fora do alcance dele, garantido pelo gatilho abaixo, não pela
 -- política: comparar o valor antigo dentro de um WITH CHECK depende de
 -- sutilezas de visibilidade de transação, e regra de segurança não deve
 -- depender disso para estar correta.
@@ -94,7 +94,7 @@ create policy perfis_admin on perfis
   with check (tem_papel('admin'));
 
 -- ---------------------------------------------------------------------------
--- Papéis — leitura do próprio; only admin atribui
+-- Papéis: leitura do próprio; só o admin atribui
 --
 -- Nenhuma política de escrita para o próprio usuário: é o que impede alguém
 -- de se promover a admin.
@@ -110,7 +110,7 @@ create policy papeis_admin on perfil_papeis
   with check (tem_papel('admin'));
 
 -- ---------------------------------------------------------------------------
--- Tabela de preços e parâmetros — todos leem, só o Administrador publica
+-- Tabela de preços e parâmetros: todos leem, só o Administrador publica
 -- ---------------------------------------------------------------------------
 
 create policy precos_versoes_leitura on tabela_precos_versoes
@@ -138,7 +138,7 @@ create policy parametros_escrita on parametros_versoes
   with check (tem_papel('admin'));
 
 -- ---------------------------------------------------------------------------
--- Custos por unidade — append-only
+-- Custos por unidade: append-only
 --
 -- Sem política de update nem de delete: o histórico de custo não se reescreve.
 -- ---------------------------------------------------------------------------
@@ -182,7 +182,7 @@ create policy solicitacoes_exclusao on solicitacoes
   using (tem_papel('master'));
 
 -- ---------------------------------------------------------------------------
--- Itens e histórico — seguem a visibilidade da solicitação dona
+-- Itens e histórico seguem a visibilidade da solicitação dona
 -- ---------------------------------------------------------------------------
 
 create policy itens_leitura on solicitacao_itens

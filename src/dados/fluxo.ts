@@ -10,7 +10,7 @@ import type { ItemInvestimento, TipoProduto, CondicaoEquipamento } from '@/domai
 import type { Database } from '@/lib/banco.types';
 import type { Solicitacao } from './solicitacoes';
 
-/** Valores que o histórico aceita — o que cabe num jsonb sem aninhamento. */
+/** Valores que o histórico aceita: o que cabe num jsonb sem aninhamento. */
 export type DetalhesEvento = Record<string, string | number | boolean | null>;
 
 type AtualizacaoSolicitacao =

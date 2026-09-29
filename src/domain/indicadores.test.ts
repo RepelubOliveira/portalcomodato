@@ -4,6 +4,8 @@ import {
   prioridades,
   resumoFluxo,
   tempoTotalConcluidas,
+  fluxoSemanal,
+  cargaPorUnidade,
   type SolicitacaoIndicador,
 } from './indicadores';
 import type { MetasPrazo } from './prazos';
@@ -66,7 +68,7 @@ describe('resumoFluxo', () => {
   });
 });
 
-describe('desempenhoPorEtapa — SLA por coorte', () => {
+describe('desempenhoPorEtapa: SLA por coorte', () => {
   it('ignora quem ainda está na etapa', () => {
     // Em andamento há muito tempo, mas sem retorno: não entra no denominador.
     const dados = [s('a', { status: 'aguardando_viabilidade_financeira', viabilidadeEnvio: '2026-08-01' })];
@@ -75,7 +77,7 @@ describe('desempenhoPorEtapa — SLA por coorte', () => {
     expect(viabilidade.percentualNoPrazo).toBeNull();
   });
 
-  it('não reporta 0% quando ninguém concluiu — seria mentira', () => {
+  it('não reporta 0% quando ninguém concluiu, porque seria mentira', () => {
     expect(desempenhoPorEtapa([], METAS)[0].percentualNoPrazo).toBeNull();
   });
 
@@ -183,5 +185,77 @@ describe('prioridades', () => {
       s(`s${i}`, { status: 'aguardando_envio_contrato', viabilidadeRetorno: '2026-09-20' }),
     );
     expect(prioridades(dados, METAS, 3, HOJE)).toHaveLength(3);
+  });
+});
+
+describe('fluxoSemanal', () => {
+  it('agrupa por semana, com a segunda-feira como início', () => {
+    // 29/09/2026 é terça; a semana começa em 28/09.
+    const semanas = fluxoSemanal(
+      [s('a', { status: 'aguardando_envio_contrato', criadoEm: '2026-09-29T10:00:00Z' })],
+      2,
+      HOJE,
+    );
+    expect(semanas.at(-1)).toMatchObject({ inicio: '2026-09-28', cadastradas: 1 });
+  });
+
+  it('trata domingo como fim da semana anterior', () => {
+    const semanas = fluxoSemanal(
+      [s('a', { status: 'aguardando_envio_contrato', criadoEm: '2026-09-27T10:00:00Z' })],
+      2,
+      HOJE,
+    );
+    expect(semanas.find((w) => w.inicio === '2026-09-21')?.cadastradas).toBe(1);
+  });
+
+  it('inclui semanas sem movimento, para o eixo do tempo não comprimir', () => {
+    const semanas = fluxoSemanal([], 6, HOJE);
+    expect(semanas).toHaveLength(6);
+    expect(semanas.every((w) => w.cadastradas === 0 && w.concluidas === 0)).toBe(true);
+  });
+
+  it('conta a conclusão na semana do retorno do contrato, não na da criação', () => {
+    const semanas = fluxoSemanal(
+      [
+        s('a', {
+          status: 'processo_concluido',
+          criadoEm: '2026-09-01T10:00:00Z',
+          contratoRetorno: '2026-09-29',
+        }),
+      ],
+      6,
+      HOJE,
+    );
+    expect(semanas.at(-1)?.concluidas).toBe(1);
+    expect(semanas.at(-1)?.cadastradas).toBe(0);
+  });
+
+  it('devolve as semanas em ordem cronológica', () => {
+    const semanas = fluxoSemanal([], 4, HOJE);
+    const ordenadas = [...semanas].sort((a, b) => a.inicio.localeCompare(b.inicio));
+    expect(semanas).toEqual(ordenadas);
+  });
+});
+
+describe('cargaPorUnidade', () => {
+  const dados = [
+    s('a', { status: 'aguardando_viabilidade_financeira', viabilidadeEnvio: '2026-09-18', unidade: 'PLN' }),
+    s('b', { status: 'aguardando_envio_contrato', viabilidadeRetorno: '2026-09-28', unidade: 'PLN' }),
+    s('c', { status: 'aguardando_envio_contrato', viabilidadeRetorno: '2026-09-28', unidade: 'SBC' }),
+    s('d', { status: 'processo_concluido', unidade: 'CBO' }),
+  ];
+
+  it('conta apenas as abertas', () => {
+    const carga = cargaPorUnidade(dados, METAS, HOJE);
+    expect(carga.map((c) => c.unidade)).not.toContain('CBO');
+  });
+
+  it('separa o total das que passaram da meta', () => {
+    const pln = cargaPorUnidade(dados, METAS, HOJE).find((c) => c.unidade === 'PLN');
+    expect(pln).toEqual({ unidade: 'PLN', emAberto: 2, acimaDaMeta: 1 });
+  });
+
+  it('ordena pelas atrasadas primeiro, porque é onde o gestor age', () => {
+    expect(cargaPorUnidade(dados, METAS, HOJE)[0].unidade).toBe('PLN');
   });
 });
