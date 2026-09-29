@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import { Plus, Trash2 } from 'lucide-react';
 import {
   Botao,
@@ -9,14 +11,21 @@ import {
   Selecao,
   cn,
 } from '@/components/ui/primitivos';
+import { Carregando, FalhaAoCarregar } from '@/components/ui/Estados';
 import {
   calcularViabilidade,
   type CondicaoEquipamento,
   type ItemInvestimento,
   type TipoProduto,
 } from '@/domain/viabilidade/calcular';
-import { CATALOGO_SEED, PARAMETROS_PADRAO } from '@/domain/viabilidade/catalogo';
-import { UNIDADES } from '@/domain/unidades';
+import { enxergaGrupoInteiro } from '@/domain/unidades';
+import {
+  listarUnidades,
+  parametrosVigentes,
+  versaoPrecosVigente,
+} from '@/dados/administracao';
+import { criarSolicitacao } from '@/dados/fluxo';
+import { usePerfil } from '@/auth/SessaoProvider';
 import {
   formatarMoeda,
   formatarMoedaPrecisa,
@@ -38,33 +47,49 @@ interface LinhaItem extends ItemInvestimento {
 let sequencia = 0;
 const novaChave = () => `item-${++sequencia}`;
 
-function itemDoCatalogo(codigo: string): LinhaItem {
-  const item = CATALOGO_SEED.find((i) => i.codigo === codigo) ?? CATALOGO_SEED[0];
-  return {
-    chave: novaChave(),
-    codigo: item.codigo,
-    descricao: item.descricao,
-    quantidade: 1,
-    // Item sem preço na tabela (ex.: carretinha) entra zerado para o
-    // Financeiro preencher — nunca some da conta silenciosamente.
-    custoUnitario: item.custoUnitario ?? 0,
-  };
-}
-
 export function CalculadoraViabilidade() {
-  const [unidade, setUnidade] = useState(UNIDADES[0].codigo);
+  const perfil = usePerfil();
+  const navegar = useNavigate();
+  const cliente = useQueryClient();
+  const visaoGrupo = enxergaGrupoInteiro(perfil.papeis);
+
+  const precos = useQuery({ queryKey: ['precos'], queryFn: versaoPrecosVigente });
+  const parametros = useQuery({ queryKey: ['parametros'], queryFn: parametrosVigentes });
+  const unidades = useQuery({
+    queryKey: ['unidades'],
+    queryFn: listarUnidades,
+    enabled: visaoGrupo,
+  });
+
+  const [unidade, setUnidade] = useState(perfil.unidade ?? '');
+  const [clienteCodigo, setClienteCodigo] = useState('');
+  const [clienteNome, setClienteNome] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [assessor, setAssessor] = useState('');
   const [produto, setProduto] = useState<TipoProduto>('S10');
   const [condicao, setCondicao] = useState<CondicaoEquipamento>('novo');
-  const [volume, setVolume] = useState('2000');
-  const [precoVenda, setPrecoVenda] = useState('7,3881');
-  const [custoUnitario, setCustoUnitario] = useState('5,293');
-  const [itens, setItens] = useState<LinhaItem[]>(() => [
-    itemDoCatalogo('TQ-1000'),
-    itemDoCatalogo('ACS-FILTRO'),
-    itemDoCatalogo('BB-IMPORTADA'),
-    itemDoCatalogo('BAC-DKD'),
-    itemDoCatalogo('SRV-INSTALACAO'),
-  ]);
+  const [volume, setVolume] = useState('');
+  const [precoVenda, setPrecoVenda] = useState('');
+  const [custoUnitario, setCustoUnitario] = useState('');
+  const [itens, setItens] = useState<LinhaItem[]>([]);
+  const [tentouSalvar, setTentouSalvar] = useState(false);
+
+  const catalogo = precos.data?.itens ?? [];
+
+  // Primeira linha assim que o catálogo chega, para a tela não abrir vazia.
+  useEffect(() => {
+    if (catalogo.length === 0 || itens.length > 0) return;
+    const tanque = catalogo.find((i) => i.categoria === 'tanque') ?? catalogo[0];
+    setItens([
+      {
+        chave: novaChave(),
+        codigo: tanque.codigo,
+        descricao: tanque.descricao,
+        quantidade: 1,
+        custoUnitario: tanque.custoUnitario ?? 0,
+      },
+    ]);
+  }, [catalogo, itens.length]);
 
   const resultado = useMemo(
     () =>
@@ -75,17 +100,78 @@ export function CalculadoraViabilidade() {
         produto,
         condicaoEquipamento: condicao,
         itens,
+        fatorPaybackMensal: parametros.data?.fatorPaybackMensal,
       }),
-    [volume, precoVenda, custoUnitario, produto, condicao, itens],
+    [volume, precoVenda, custoUnitario, produto, condicao, itens, parametros.data],
   );
 
+  const salvar = useMutation({
+    mutationFn: () =>
+      criarSolicitacao({
+        unidade,
+        clienteCodigo: clienteCodigo.trim(),
+        clienteNome: clienteNome.trim(),
+        cidade: cidade.trim(),
+        assessor: assessor.trim(),
+        produto,
+        condicaoEquipamento: condicao,
+        volumeMensalLitros: lerNumero(volume),
+        precoMedioVenda: lerNumero(precoVenda),
+        custoUnitario: lerNumero(custoUnitario),
+        itens: itens.map(({ chave: _chave, ...i }) => i),
+        tabelaPrecosVersaoId: precos.data?.id ?? null,
+        parametrosVersaoId: parametros.data?.id ?? null,
+        criadoPor: perfil.id,
+      }),
+    onSuccess: (id) => {
+      cliente.invalidateQueries({ queryKey: ['solicitacoes'] });
+      void navegar({ to: '/solicitacoes/$solicitacaoId', params: { solicitacaoId: id } });
+    },
+  });
+
+  const impedimentos = useMemo(() => {
+    const lista: string[] = [];
+    if (!unidade) lista.push('Selecione a unidade.');
+    if (clienteNome.trim().length < 2) lista.push('Informe o cliente.');
+    if (!clienteCodigo.trim()) lista.push('Informe o código do cliente.');
+    if (cidade.trim().length < 2) lista.push('Informe a cidade de instalação.');
+    if (assessor.trim().length < 2) lista.push('Informe o assessor.');
+    if (lerNumero(volume) <= 0) lista.push('Informe o volume mensal.');
+    if (lerNumero(precoVenda) <= 0) lista.push('Informe o preço médio de venda.');
+    if (lerNumero(custoUnitario) <= 0) lista.push('Informe o custo unitário.');
+    if (itens.length === 0) lista.push('Adicione ao menos um item de investimento.');
+    return lista;
+  }, [unidade, clienteNome, clienteCodigo, cidade, assessor, volume, precoVenda, custoUnitario, itens]);
+
   const semPreco = itens.filter((i) => i.custoUnitario <= 0);
-  const margemNegativa = resultado.lucroBrutoMensal < 0;
+  const margemNegativa = resultado.lucroBrutoMensal < 0 && lerNumero(volume) > 0;
 
   const atualizarItem = (chave: string, mudanca: Partial<LinhaItem>) =>
-    setItens((atual) =>
-      atual.map((i) => (i.chave === chave ? { ...i, ...mudanca } : i)),
+    setItens((atual) => atual.map((i) => (i.chave === chave ? { ...i, ...mudanca } : i)));
+
+  const adicionarItem = () => {
+    const primeiro = catalogo[0];
+    if (!primeiro) return;
+    setItens((a) => [
+      ...a,
+      {
+        chave: novaChave(),
+        codigo: primeiro.codigo,
+        descricao: primeiro.descricao,
+        quantidade: 1,
+        custoUnitario: primeiro.custoUnitario ?? 0,
+      },
+    ]);
+  };
+
+  if (precos.isLoading) return <Carregando texto="Carregando tabela de preços…" />;
+  if (precos.error) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <FalhaAoCarregar erro={precos.error} onTentarNovamente={() => precos.refetch()} />
+      </div>
     );
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 lg:py-8">
@@ -94,34 +180,78 @@ export function CalculadoraViabilidade() {
           Análise financeira · F-VE.4
         </p>
         <h1 className="mt-1 text-2xl font-bold text-slate-900 lg:text-3xl">
-          Viabilidade do comodato
+          Nova viabilidade
         </h1>
         <p className="mt-1 text-sm text-slate-500">
           O prazo de retorno é recalculado a cada alteração. Nada é gravado até
-          você enviar ao Financeiro.
+          você cadastrar.
         </p>
       </header>
 
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
-          <Cartao
-            titulo="Dados da operação"
-            descricao="Volume e preços praticados na unidade."
-          >
+          <Cartao titulo="Cliente" descricao="Quem recebe o equipamento em comodato.">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Campo label="Unidade">
+              <Campo
+                label="Unidade"
+                hint={visaoGrupo ? undefined : 'Sua unidade, definida no cadastro.'}
+              >
                 <Selecao
+                  disabled={!visaoGrupo}
                   value={unidade}
                   onChange={(e) => setUnidade(e.target.value)}
                 >
-                  {UNIDADES.map((u) => (
-                    <option key={u.codigo} value={u.codigo}>
-                      {u.codigo} · {u.nome}
-                    </option>
-                  ))}
+                  {!visaoGrupo && perfil.unidade ? (
+                    <option value={perfil.unidade}>{perfil.unidade}</option>
+                  ) : (
+                    <>
+                      <option value="">Selecione</option>
+                      {(unidades.data ?? []).map((u) => (
+                        <option key={u.codigo} value={u.codigo}>
+                          {u.codigo} · {u.nome}
+                        </option>
+                      ))}
+                    </>
+                  )}
                 </Selecao>
               </Campo>
 
+              <Campo label="Código do cliente">
+                <Entrada
+                  value={clienteCodigo}
+                  maxLength={40}
+                  onChange={(e) => setClienteCodigo(e.target.value)}
+                />
+              </Campo>
+
+              <Campo label="Assessor">
+                <Entrada
+                  value={assessor}
+                  maxLength={100}
+                  onChange={(e) => setAssessor(e.target.value)}
+                />
+              </Campo>
+
+              <Campo label="Cliente" className="sm:col-span-2">
+                <Entrada
+                  value={clienteNome}
+                  maxLength={160}
+                  onChange={(e) => setClienteNome(e.target.value)}
+                />
+              </Campo>
+
+              <Campo label="Cidade da instalação">
+                <Entrada
+                  value={cidade}
+                  maxLength={120}
+                  onChange={(e) => setCidade(e.target.value)}
+                />
+              </Campo>
+            </div>
+          </Cartao>
+
+          <Cartao titulo="Dados da operação" descricao="Volume e preços praticados.">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Campo label="Produto">
                 <Selecao
                   value={produto}
@@ -138,9 +268,7 @@ export function CalculadoraViabilidade() {
               <Campo label="Condição do equipamento">
                 <Selecao
                   value={condicao}
-                  onChange={(e) =>
-                    setCondicao(e.target.value as CondicaoEquipamento)
-                  }
+                  onChange={(e) => setCondicao(e.target.value as CondicaoEquipamento)}
                 >
                   <option value="novo">Novo</option>
                   <option value="reformado">Reformado</option>
@@ -155,10 +283,7 @@ export function CalculadoraViabilidade() {
                 />
               </Campo>
 
-              <Campo
-                label="Preço médio de venda (R$/L)"
-                hint="Último lançamento da unidade."
-              >
+              <Campo label="Preço médio de venda (R$/L)">
                 <Entrada
                   inputMode="decimal"
                   value={precoVenda}
@@ -166,10 +291,7 @@ export function CalculadoraViabilidade() {
                 />
               </Campo>
 
-              <Campo
-                label="Custo unitário (R$/L)"
-                hint="Último lançamento da unidade."
-              >
+              <Campo label="Custo unitário (R$/L)">
                 <Entrada
                   inputMode="decimal"
                   value={custoUnitario}
@@ -181,14 +303,13 @@ export function CalculadoraViabilidade() {
 
           <Cartao
             titulo="Investimento"
-            descricao="Equipamentos e serviços que a Risel entrega em comodato."
+            descricao={
+              precos.data
+                ? `Tabela vigente desde ${new Date(`${precos.data.vigencia}T12:00:00`).toLocaleDateString('pt-BR')}.`
+                : undefined
+            }
             acao={
-              <Botao
-                variante="contorno"
-                onClick={() =>
-                  setItens((a) => [...a, itemDoCatalogo('TQ-1000')])
-                }
-              >
+              <Botao variante="contorno" onClick={adicionarItem}>
                 <Plus className="size-4" />
                 Adicionar item
               </Botao>
@@ -212,9 +333,7 @@ export function CalculadoraViabilidade() {
                         <Selecao
                           value={item.codigo}
                           onChange={(e) => {
-                            const novo = CATALOGO_SEED.find(
-                              (i) => i.codigo === e.target.value,
-                            );
+                            const novo = catalogo.find((i) => i.codigo === e.target.value);
                             if (!novo) return;
                             atualizarItem(item.chave, {
                               codigo: novo.codigo,
@@ -223,7 +342,7 @@ export function CalculadoraViabilidade() {
                             });
                           }}
                         >
-                          {CATALOGO_SEED.map((i) => (
+                          {catalogo.map((i) => (
                             <option key={i.codigo} value={i.codigo}>
                               {i.descricao}
                             </option>
@@ -236,9 +355,7 @@ export function CalculadoraViabilidade() {
                           inputMode="numeric"
                           value={String(item.quantidade)}
                           onChange={(e) =>
-                            atualizarItem(item.chave, {
-                              quantidade: lerNumero(e.target.value),
-                            })
+                            atualizarItem(item.chave, { quantidade: lerNumero(e.target.value) })
                           }
                         />
                       </td>
@@ -246,15 +363,12 @@ export function CalculadoraViabilidade() {
                         <Entrada
                           className={cn(
                             'text-right',
-                            item.custoUnitario <= 0 &&
-                              'border-amber-400 bg-amber-50',
+                            item.custoUnitario <= 0 && 'border-amber-400 bg-amber-50',
                           )}
                           inputMode="decimal"
                           value={String(item.custoUnitario).replace('.', ',')}
                           onChange={(e) =>
-                            atualizarItem(item.chave, {
-                              custoUnitario: lerNumero(e.target.value),
-                            })
+                            atualizarItem(item.chave, { custoUnitario: lerNumero(e.target.value) })
                           }
                         />
                       </td>
@@ -265,9 +379,7 @@ export function CalculadoraViabilidade() {
                         <button
                           aria-label={`Remover ${item.descricao}`}
                           onClick={() =>
-                            setItens((a) =>
-                              a.filter((i) => i.chave !== item.chave),
-                            )
+                            setItens((a) => a.filter((i) => i.chave !== item.chave))
                           }
                           className="rounded p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
                         >
@@ -296,8 +408,8 @@ export function CalculadoraViabilidade() {
                 {semPreco.length === 1
                   ? '1 item está sem custo'
                   : `${semPreco.length} itens estão sem custo`}{' '}
-                e não entra no investimento. O Financeiro precisa informar o
-                valor antes da aprovação.
+                e não entra no investimento. O Financeiro precisa informar o valor
+                antes da aprovação.
               </p>
             )}
           </Cartao>
@@ -321,7 +433,11 @@ export function CalculadoraViabilidade() {
             <LinhaResultado
               rotulo="Fator payback"
               valor={formatarMoedaPrecisa(resultado.fatorPaybackReais)}
-              detalhe={`${formatarPercentual(PARAMETROS_PADRAO.fatorPaybackMensal)} do faturamento`}
+              detalhe={
+                parametros.data
+                  ? `${formatarPercentual(parametros.data.fatorPaybackMensal)} do faturamento`
+                  : undefined
+              }
             />
           </Cartao>
 
@@ -336,9 +452,7 @@ export function CalculadoraViabilidade() {
             <p
               className={cn(
                 'text-xs font-bold tracking-wide uppercase',
-                margemNegativa || resultado.semRetorno
-                  ? 'text-red-700'
-                  : 'text-risel-700',
+                margemNegativa || resultado.semRetorno ? 'text-red-700' : 'text-risel-700',
               )}
             >
               Prazo de retorno · equipamento {condicao}
@@ -346,9 +460,7 @@ export function CalculadoraViabilidade() {
             <p
               className={cn(
                 'tabular mt-2 text-4xl font-bold',
-                margemNegativa || resultado.semRetorno
-                  ? 'text-red-800'
-                  : 'text-risel-800',
+                margemNegativa || resultado.semRetorno ? 'text-red-800' : 'text-risel-800',
               )}
             >
               {formatarPrazo(resultado.prazoRetornoAnos)}
@@ -361,12 +473,26 @@ export function CalculadoraViabilidade() {
             )}
           </div>
 
-          <div className="flex gap-3">
-            <Botao variante="contorno" className="flex-1">
-              Salvar rascunho
-            </Botao>
-            <Botao className="flex-1">Enviar ao Financeiro</Botao>
-          </div>
+          {tentouSalvar && impedimentos.length > 0 && (
+            <ul className="space-y-1 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {impedimentos.map((m) => (
+                <li key={m}>{m}</li>
+              ))}
+            </ul>
+          )}
+
+          {salvar.error && <FalhaAoCarregar erro={salvar.error} />}
+
+          <Botao
+            className="w-full"
+            disabled={salvar.isPending}
+            onClick={() => {
+              setTentouSalvar(true);
+              if (impedimentos.length === 0) salvar.mutate();
+            }}
+          >
+            {salvar.isPending ? 'Cadastrando…' : 'Cadastrar solicitação'}
+          </Botao>
         </aside>
       </div>
     </div>

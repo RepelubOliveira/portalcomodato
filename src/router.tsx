@@ -8,38 +8,63 @@ import { LayoutPortal } from '@/components/LayoutPortal';
 import { CalculadoraViabilidade } from '@/features/viabilidade/CalculadoraViabilidade';
 import { Administracao } from '@/features/administracao/Administracao';
 import { ListaSolicitacoes } from '@/features/solicitacoes/ListaSolicitacoes';
+import { DetalheSolicitacao } from '@/features/solicitacoes/DetalheSolicitacao';
 import { EmConstrucao } from '@/components/EmConstrucao';
 
 const rotaRaiz = createRootRoute({ component: LayoutPortal });
 
-const rota = (path: string, component: () => React.ReactElement) =>
-  createRoute({ getParentRoute: () => rotaRaiz, path, component });
+/**
+ * O parâmetro de caminho é genérico de propósito.
+ *
+ * Com `path: string`, o literal se perde e o router passa a não conhecer rota
+ * alguma: `<Link to="/solicitacoes">` deixa de ser verificado e um caminho
+ * digitado errado só apareceria como tela em branco em produção.
+ */
+const rota = <const T extends string>(
+  path: T,
+  component: () => React.ReactElement,
+) => createRoute({ getParentRoute: () => rotaRaiz, path, component });
 
-const rotas = [
-  rota('/', () => (
-    <EmConstrucao
-      titulo="Visão geral"
-      descricao="Indicadores de prazo e fluxo, com SLA medido por coorte e contagem em dias úteis."
-    />
-  )),
-  rota('/solicitacoes', () => <ListaSolicitacoes />),
-  rota('/viabilidade', () => <CalculadoraViabilidade />),
-  rota('/pendencias', () => (
-    <EmConstrucao
-      titulo="Minhas pendências"
-      descricao="Fila nominal — o que está atribuído a você, não ao seu papel."
-    />
-  )),
-  rota('/unidades', () => (
-    <EmConstrucao
-      titulo="Unidades"
-      descricao="Comparativo entre as unidades do grupo."
-    />
-  )),
-  rota('/administracao', () => <Administracao />),
-];
+const rotaVisaoGeral = rota('/', () => (
+  <EmConstrucao
+    titulo="Visão geral"
+    descricao="Indicadores de prazo e fluxo, com SLA medido por coorte e contagem em dias úteis."
+  />
+));
 
-const arvoreDeRotas = rotaRaiz.addChildren(rotas);
+const rotaSolicitacoes = rota('/solicitacoes', () => <ListaSolicitacoes />);
+
+const rotaDetalhe = rota('/solicitacoes/$solicitacaoId', () => (
+  <DetalheSolicitacao />
+));
+
+const rotaViabilidade = rota('/viabilidade', () => <CalculadoraViabilidade />);
+
+const rotaPendencias = rota('/pendencias', () => (
+  <EmConstrucao
+    titulo="Minhas pendências"
+    descricao="Fila nominal — o que está atribuído a você, não ao seu papel."
+  />
+));
+
+const rotaUnidades = rota('/unidades', () => (
+  <EmConstrucao
+    titulo="Unidades"
+    descricao="Comparativo entre as unidades do grupo."
+  />
+));
+
+const rotaAdministracao = rota('/administracao', () => <Administracao />);
+
+const arvoreDeRotas = rotaRaiz.addChildren([
+  rotaVisaoGeral,
+  rotaSolicitacoes,
+  rotaDetalhe,
+  rotaViabilidade,
+  rotaPendencias,
+  rotaUnidades,
+  rotaAdministracao,
+]);
 
 // Hash history: a hospedagem é estática e não tem fallback para rotas por path.
 export const router = createRouter({

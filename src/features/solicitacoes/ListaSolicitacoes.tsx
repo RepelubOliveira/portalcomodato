@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { Download, Search } from 'lucide-react';
 import { Botao, Cartao, Entrada, Selecao, cn } from '@/components/ui/primitivos';
 import { Carregando, FalhaAoCarregar, Vazio } from '@/components/ui/Estados';
@@ -261,9 +262,11 @@ export function ListaSolicitacoes() {
                   fora da tela e só apareceria arrastando de lado. */}
               <div className="space-y-3 md:hidden">
                 {filtradas.map(({ s, prazo }) => (
-                  <article
+                  <Link
                     key={s.id}
-                    className="rounded-lg border border-slate-200 bg-white p-4"
+                    to="/solicitacoes/$solicitacaoId"
+                    params={{ solicitacaoId: s.id }}
+                    className="block rounded-lg border border-slate-200 bg-white p-4 active:bg-slate-50"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -284,7 +287,7 @@ export function ListaSolicitacoes() {
                     <p className="mt-1 text-xs text-slate-500">
                       {s.unidade} · {prazo.area} · {formatarLitros(s.volumeMensalLitros)}/mês
                     </p>
-                  </article>
+                  </Link>
                 ))}
               </div>
             </>
@@ -308,7 +311,13 @@ function LinhaSolicitacao({
         <IndicadorPrazo situacao={prazo} />
       </td>
       <td className="px-4 py-3">
-        <p className="font-semibold text-slate-900">{s.clienteNome}</p>
+        <Link
+          to="/solicitacoes/$solicitacaoId"
+          params={{ solicitacaoId: s.id }}
+          className="font-semibold text-slate-900 hover:text-risel-700 hover:underline"
+        >
+          {s.clienteNome}
+        </Link>
         <p className="text-xs text-slate-500">
           {s.clienteCodigo} · {s.cidade} · {s.assessor}
         </p>
