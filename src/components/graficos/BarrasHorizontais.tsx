@@ -69,14 +69,19 @@ export function BarrasHorizontais({
               </span>
 
               <div className="relative h-5">
-                <div
-                  className={cn(
-                    'absolute inset-y-0 left-0 rounded-sm bg-[var(--color-serie-1)] transition-opacity',
-                    ativo ? 'opacity-100' : 'opacity-85',
-                  )}
-                  style={{ width: `${Math.max(largura, 1.5)}%` }}
-                />
-                {larguraDestaque > 0 && (
+                {/* Zero não desenha nada. Um piso de largura aplicado ao zero
+                    produziria uma barra onde não há quantidade, que é a
+                    diferença entre "pouco" e "nenhum". */}
+                {d.valor > 0 && (
+                  <div
+                    className={cn(
+                      'absolute inset-y-0 left-0 rounded-sm bg-[var(--color-serie-1)] transition-opacity',
+                      ativo ? 'opacity-100' : 'opacity-85',
+                    )}
+                    style={{ width: `${Math.max(largura, 1.5)}%` }}
+                  />
+                )}
+                {(d.destaque ?? 0) > 0 && (
                   // Anel branco de 2px separa a sobreposição da barra de baixo,
                   // para as duas leituras não se fundirem numa cor só.
                   <div

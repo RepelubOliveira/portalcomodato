@@ -10,7 +10,8 @@ import { Administracao } from '@/features/administracao/Administracao';
 import { ListaSolicitacoes } from '@/features/solicitacoes/ListaSolicitacoes';
 import { DetalheSolicitacao } from '@/features/solicitacoes/DetalheSolicitacao';
 import { VisaoGeral } from '@/features/visaogeral/VisaoGeral';
-import { EmConstrucao } from '@/components/EmConstrucao';
+import { MinhasPendencias } from '@/features/pendencias/MinhasPendencias';
+import { VisaoUnidades } from '@/features/unidades/VisaoUnidades';
 
 const rotaRaiz = createRootRoute({ component: LayoutPortal });
 
@@ -36,19 +37,9 @@ const rotaDetalhe = rota('/solicitacoes/$solicitacaoId', () => (
 
 const rotaViabilidade = rota('/viabilidade', () => <CalculadoraViabilidade />);
 
-const rotaPendencias = rota('/pendencias', () => (
-  <EmConstrucao
-    titulo="Minhas pendências"
-    descricao="Fila nominal: o que está atribuído a você, não ao seu papel."
-  />
-));
+const rotaPendencias = rota('/pendencias', () => <MinhasPendencias />);
 
-const rotaUnidades = rota('/unidades', () => (
-  <EmConstrucao
-    titulo="Unidades"
-    descricao="Comparativo entre as unidades do grupo."
-  />
-));
+const rotaUnidades = rota('/unidades', () => <VisaoUnidades />);
 
 const rotaAdministracao = rota('/administracao', () => <Administracao />);
 

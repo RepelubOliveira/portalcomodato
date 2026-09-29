@@ -259,3 +259,34 @@ export async function excluirSolicitacao(id: string): Promise<void> {
 export function statusLegivel(status: StatusSolicitacao): string {
   return ROTULO_STATUS[status];
 }
+
+// ---------------------------------------------------------------------------
+// Atribuição
+// ---------------------------------------------------------------------------
+
+/**
+ * Define ou remove o dono da solicitação.
+ *
+ * Passa pelo histórico porque trocar de dono é uma decisão operacional: sem
+ * registro, ninguém sabe desde quando a pendência estava parada com quem.
+ */
+export async function atribuir(
+  solicitacaoId: string,
+  novoDono: string | null,
+  nomeNovoDono: string | null,
+  atorId: string,
+): Promise<void> {
+  const { error } = await exigirSupabase()
+    .from('solicitacoes')
+    .update({ atribuido_a: novoDono })
+    .eq('id', solicitacaoId);
+
+  if (error) throw new Error(error.message);
+
+  await registrar(
+    solicitacaoId,
+    novoDono === atorId ? 'Pendência assumida' : novoDono ? 'Responsável alterado' : 'Responsável removido',
+    novoDono && nomeNovoDono ? { responsavel: nomeNovoDono } : null,
+    atorId,
+  );
+}
