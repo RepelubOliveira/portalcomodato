@@ -1,0 +1,64 @@
+name: Publicar portal
+
+# Publica o portal a cada push na main. O build roda aqui, no GitHub, e não
+# na máquina de ninguém: assim a versão no ar é sempre a do repositório.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Uma publicação por vez. Cancelar a anterior evitaria deixar no ar um build
+# mais velho caso dois pushes se cruzem.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verificar tipos
+        run: npx tsc -b --noEmit
+
+      - name: Testes
+        run: npm test
+
+      - name: Build
+        env:
+          # Valores públicos por natureza: vão para o bundle do navegador de
+          # qualquer forma, e quem protege os dados é a RLS do Supabase.
+          # Ficam como variáveis do repositório para poderem ser trocados sem
+          # mexer no código. A chave service_role nunca entra aqui.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
