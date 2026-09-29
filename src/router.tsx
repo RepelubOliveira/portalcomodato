@@ -7,6 +7,7 @@ import {
 import { LayoutPortal } from '@/components/LayoutPortal';
 import { CalculadoraViabilidade } from '@/features/viabilidade/CalculadoraViabilidade';
 import { Administracao } from '@/features/administracao/Administracao';
+import { ListaSolicitacoes } from '@/features/solicitacoes/ListaSolicitacoes';
 import { EmConstrucao } from '@/components/EmConstrucao';
 
 const rotaRaiz = createRootRoute({ component: LayoutPortal });
@@ -21,12 +22,7 @@ const rotas = [
       descricao="Indicadores de prazo e fluxo, com SLA medido por coorte e contagem em dias úteis."
     />
   )),
-  rota('/solicitacoes', () => (
-    <EmConstrucao
-      titulo="Solicitações"
-      descricao="Lista da unidade, com filtros e exportação."
-    />
-  )),
+  rota('/solicitacoes', () => <ListaSolicitacoes />),
   rota('/viabilidade', () => <CalculadoraViabilidade />),
   rota('/pendencias', () => (
     <EmConstrucao

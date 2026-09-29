@@ -39,6 +39,20 @@ export function formatarPrazo(anos: number): string {
   })} anos`;
 }
 
+/**
+ * Prepara texto para comparação de busca: sem acento, em minúsculas.
+ *
+ * Ninguém digita "Lindóia" com acento numa caixa de busca, e sem isto o
+ * cliente simplesmente não aparece — o usuário conclui que não existe.
+ */
+export function normalizar(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 /** Converte texto digitado em pt-BR ("7,3881") para número. */
 export function lerNumero(texto: string): number {
   const limpo = texto.replace(/\./g, '').replace(',', '.').trim();
